@@ -157,9 +157,9 @@ void ll_rw_block(int rw, struct buffer_head * bh)
 void blk_dev_init(void)
 {
 	int i;
-
+	//NR_REQUEST最多為32個
 	for (i=0 ; i<NR_REQUEST ; i++) {
 		request[i].dev = -1;
-		request[i].next = NULL;
+		request[i].next = NULL;  // next為一request，也就是說，這整個為一個link list
 	}
 }

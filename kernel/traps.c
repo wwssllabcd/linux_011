@@ -181,7 +181,12 @@ void do_reserved(long esp, long error_code)
 void trap_init(void)
 {
 	int i;
+	//而80x86 CPU本身就會引發0~19號中斷，而20~31號由intel自己保留，供日後開發使用
+	//可見linux核心詳解P-146
 
+	//divide_error是一個function, 這邊把該 function的位置設到IDT中
+	//而看來這個function是自己產生出來的，叫do_divide_error
+	
 	set_trap_gate(0,&divide_error);
 	set_trap_gate(1,&debug);
 	set_trap_gate(2,&nmi);
@@ -199,8 +204,12 @@ void trap_init(void)
 	set_trap_gate(14,&page_fault);
 	set_trap_gate(15,&reserved);
 	set_trap_gate(16,&coprocessor_error);
+	
+	// 其實這塊是 BIOS 與 DOS中斷使用，BISO使用0x10~0x1F, DOS使用0x20~0x2F
+	// 由此可知linux 捨棄bios中斷不用
 	for (i=17;i<48;i++)
 		set_trap_gate(i,&reserved);
+		
 	set_trap_gate(45,&irq13);
 	outb_p(inb_p(0x21)&0xfb,0x21);
 	outb(inb_p(0xA1)&0xdf,0xA1);

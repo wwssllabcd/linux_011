@@ -58,7 +58,7 @@ sa_mask = 4
 sa_flags = 8
 sa_restorer = 12
 
-nr_system_calls = 72
+nr_system_calls = 72  #system call一共有72個(0~71, 連續號)
 
 /*
  * Ok, I get parallel printer interrupts while using the floppy for some
@@ -68,8 +68,8 @@ nr_system_calls = 72
 .globl hd_interrupt,floppy_interrupt,parallel_interrupt
 .globl device_not_available, coprocessor_error
 
-.align 2
-bad_sys_call:
+.align 2       # 對齊4字節
+bad_sys_call:  # bad system call, 也就是a放 -1(因為system call的asm最後都會 ":=a", 代表輸出放到eax
 	movl $-1,%eax
 	iret
 .align 2
@@ -78,26 +78,32 @@ reschedule:
 	jmp schedule
 .align 2
 system_call:
-	cmpl $nr_system_calls-1,%eax
-	ja bad_sys_call
+	cmpl $nr_system_calls-1,%eax  # 是比大小吧看看eax的值是否小於72
+	ja bad_sys_call               # 如果沒找到的話, jump到bad_sys_call
+				      # 保留原 "段" register
 	push %ds
 	push %es
 	push %fs
 	pushl %edx
 	pushl %ecx		# push %ebx,%ecx,%edx as parameters
 	pushl %ebx		# to the system call
+
+	# 把edx設成10, 在設給 ds,es
 	movl $0x10,%edx		# set up ds,es to kernel space
 	mov %dx,%ds
 	mov %dx,%es
 	movl $0x17,%edx		# fs points to local data space
 	mov %dx,%fs
-	call *sys_call_table(,%eax,4)
+
+	call *sys_call_table(,%eax,4)   # 這種寫法是 AT&T中的 sys_call_table[%eax*4]
 	pushl %eax
 	movl current,%eax
 	cmpl $0,state(%eax)		# state
 	jne reschedule
 	cmpl $0,counter(%eax)		# counter
 	je reschedule
+
+	# 凡是system call之後, 一定要做的事?
 ret_from_sys_call:
 	movl current,%eax		# task[0] cannot have signals
 	cmpl task,%eax

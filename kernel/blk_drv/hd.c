@@ -342,8 +342,14 @@ void do_hd_request(void)
 
 void hd_init(void)
 {
+	//blk_dev看來像是各種io的index，3號為HD的index(2號為Floppy)
+	// MAJOR_NR定義在自己的頭文件上
 	blk_dev[MAJOR_NR].request_fn = DEVICE_REQUEST;
+	
+	//設置硬盤中斷向量
 	set_intr_gate(0x2E,&hd_interrupt);
+	
+	// 復位接聯的主8259A int2 的屏蔽位，允許從片發出中斷請求信號。
 	outb_p(inb_p(0x21)&0xfb,0x21);
 	outb(inb_p(0xA1)&0xbf,0xA1);
 }
