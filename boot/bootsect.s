@@ -42,22 +42,22 @@
 
 # ROOT_DEV:	0x000 - same type of floppy as boot.
 #		0x301 - first partition on first drive etc
-	.equ ROOT_DEV, 0x301       # ³oÃä¥Nªí­nÅª¨ú¨º­Ó¸Ë¸m¡A0x301¬OÅª¨ú/dev/hda1¡A¤]¥i¥H´À´«¨ä¥L¸Ë¸m
-	ljmp    $BOOTSEG, $_start  # ³oÃä¤@­Ó¬OCS(BOOTSEG), ¤@­Ó¬OEIP(_start)
+	.equ ROOT_DEV, 0x301       # é€™é‚Šä»£è¡¨è¦è®€å–é‚£å€‹è£ç½®ï¼Œ0x301æ˜¯è®€å–/dev/hda1ï¼Œä¹Ÿå¯ä»¥æ›¿æ›å…¶ä»–è£ç½®
+	ljmp    $BOOTSEG, $_start  # é€™é‚Šä¸€å€‹æ˜¯CS(BOOTSEG), ä¸€å€‹æ˜¯EIP(_start)
 _start:
-	#±µ¤U¨Ó´N¬O§â¦Û¤v²¾°Ê¨ì 0x9000ªº¦ì¸m¡A¬°¦ó­n²¾°Ê¡A¬O¦]¬°setup.S±N°Ñ¼Æªí«O¦s¨ì¨º¸Ì¦Ó¹w¯dªÅ¶¡
-	mov	$BOOTSEG, %ax          # §â0x07C0 ³]µ¹ ds, §â0x9000³]µ¹ es, µ¥¤Ucopy ªº®É­Ô¡A·|¥Î¨ì·½¦a§}ªº²Õ¦X¬O ds:si, ¬ÛÀ³ªº¥Ø¼Ğ¦a§}¬° es:di
+	#æ¥ä¸‹ä¾†å°±æ˜¯æŠŠè‡ªå·±ç§»å‹•åˆ° 0x9000çš„ä½ç½®ï¼Œç‚ºä½•è¦ç§»å‹•ï¼Œæ˜¯å› ç‚ºsetup.Så°‡åƒæ•¸è¡¨ä¿å­˜åˆ°é‚£è£¡è€Œé ç•™ç©ºé–“
+	mov	$BOOTSEG, %ax          # æŠŠ0x07C0 è¨­çµ¦ ds, æŠŠ0x9000è¨­çµ¦ es, ç­‰ä¸‹copy çš„æ™‚å€™ï¼Œæœƒç”¨åˆ°æºåœ°å€çš„çµ„åˆæ˜¯ ds:si, ç›¸æ‡‰çš„ç›®æ¨™åœ°å€ç‚º es:di
 	mov	%ax, %ds
 	mov	$INITSEG, %ax
 	mov	%ax, %es
-	mov	$256, %cx              # cx register³q±`®³¨Ó·ícounter, ¤]´N¬Ofor loop¤¤ªº i
-	sub	%si, %si               # sub ¬O¼È¦s¾¹¬Û´î¡A³o¸Ìªº·N«ä¦P xor %si, %si, ¤]´N¬Osi¬Û´î¡A²M¦¨0
+	mov	$256, %cx              # cx registeré€šå¸¸æ‹¿ä¾†ç•¶counter, ä¹Ÿå°±æ˜¯for loopä¸­çš„ i
+	sub	%si, %si               # sub æ˜¯æš«å­˜å™¨ç›¸æ¸›ï¼Œé€™è£¡çš„æ„æ€åŒ xor %si, %si, ä¹Ÿå°±æ˜¯siç›¸æ¸›ï¼Œæ¸…æˆ0
 	sub	%di, %di
-	rep	                       # rep¬°repeat«ü¥O¡A¥L·|®Ú¾ÚCX­È¡A·í§@repeatªº¦¸¼Æ
-	movsw                      # movw AT&T »yªk ¬OÁô§t¾Ş§@¼Æªº¡A±q [ds:si]->[es:si], Intel»yªk¦n¹³¬O movsw, ¤]´N¬Ocopy data±q 0x7C0¨ì0x9000¡A¬Û¸û©óMOVSB¡AMOVSW¬O¥HWORD¬°³æ¦ì
-	ljmp	$INITSEG, $go      # ¸õ¨ì  INITSEG:go  ³B¡A¤]´N¬O¤£¦ı§â¦Û¤v²¾¨ì0x9000¤§¥~¡A¤]§â¥Ø«e°õ¦æ³B¡A±q0x7Cxx²¾¨ì0x90XX¤§«á¡A±µÄòµÛ°µ¤U¥h
+	rep	                       # repç‚ºrepeatæŒ‡ä»¤ï¼Œä»–æœƒæ ¹æ“šCXå€¼ï¼Œç•¶ä½œrepeatçš„æ¬¡æ•¸
+	movsw                      # movw AT&T èªæ³• æ˜¯éš±å«æ“ä½œæ•¸çš„ï¼Œå¾ [ds:si]->[es:si], Intelèªæ³•å¥½åƒæ˜¯ movsw, ä¹Ÿå°±æ˜¯copy dataå¾ 0x7C0åˆ°0x9000ï¼Œç›¸è¼ƒæ–¼MOVSBï¼ŒMOVSWæ˜¯ä»¥WORDç‚ºå–®ä½
+	ljmp	$INITSEG, $go      # è·³åˆ°  INITSEG:go  è™•ï¼Œä¹Ÿå°±æ˜¯ä¸ä½†æŠŠè‡ªå·±ç§»åˆ°0x9000ä¹‹å¤–ï¼Œä¹ŸæŠŠç›®å‰åŸ·è¡Œè™•ï¼Œå¾0x7Cxxç§»åˆ°0x90XXä¹‹å¾Œï¼Œæ¥çºŒè‘—åšä¸‹å»
 
-go:	mov	%cs, %ax               # copy§¹¦¨«á¡A§âds, es, ss ­«³]¦¨ cs ( 0x9000) 
+go:	mov	%cs, %ax               # copyå®Œæˆå¾Œï¼ŒæŠŠds, es, ss é‡è¨­æˆ cs ( 0x9000) 
 	mov	%ax, %ds
 	mov	%ax, %es
 # put stack at 0x9ff00.
@@ -66,18 +66,18 @@ go:	mov	%cs, %ax               # copy§¹¦¨«á¡A§âds, es, ss ­«³]¦¨ cs ( 0x9000)
 
 # load the setup-sectors directly after the bootblock.
 # Note that 'es' is already set up.
-# ·Ç³ÆÅª¨úsec 2 ¥X¨Ó¡A¦¹®Ésec 2 ¬O©ñ¸m setup.S ªº code
-# ¨Ï¥Îint 13®É¡A©ñ¸m dataªº¦a¤è¬O¥H ES:BX ¨Ó¥Nªí
+# æº–å‚™è®€å–sec 2 å‡ºä¾†ï¼Œæ­¤æ™‚sec 2 æ˜¯æ”¾ç½® setup.S çš„ code
+# ä½¿ç”¨int 13æ™‚ï¼Œæ”¾ç½® dataçš„åœ°æ–¹æ˜¯ä»¥ ES:BX ä¾†ä»£è¡¨
 load_setup:
 	mov	$0x0000, %dx		# drive 0, head 0
-	mov	$0x0002, %cx		# sector 2, track 0         # §â sec 2 Åª¥X¨Ó(chs mode ¬O¥Hsec 1 §@¬°¶}©l)
-	mov	$0x0200, %bx		# address = 512, in INITSEG # address = ES*0x10 + BX, ES:BX «ü¦V¸Óservice­n¦s©ñ¦b­ş,¥Ñ¦¹¥iª¾³oÃä¬O­n§âdataÅª¥X¨Ó©ñ¨ì0x90200ªº¦ì¸m
-	.equ    AX, 0x0200+SETUPLEN                         # ³oÃäªº­È¬°0x0204, AH¬O0x02¸¹ service (§âdata©ñ¨ìram), AL ¬°Åª´X­Ó sector
+	mov	$0x0002, %cx		# sector 2, track 0         # æŠŠ sec 2 è®€å‡ºä¾†(chs mode æ˜¯ä»¥sec 1 ä½œç‚ºé–‹å§‹)
+	mov	$0x0200, %bx		# address = 512, in INITSEG # address = ES*0x10 + BX, ES:BX æŒ‡å‘è©²serviceè¦å­˜æ”¾åœ¨å“ª,ç”±æ­¤å¯çŸ¥é€™é‚Šæ˜¯è¦æŠŠdataè®€å‡ºä¾†æ”¾åˆ°0x90200çš„ä½ç½®
+	.equ    AX, 0x0200+SETUPLEN                         # é€™é‚Šçš„å€¼ç‚º0x0204, AHæ˜¯0x02è™Ÿ service (æŠŠdataæ”¾åˆ°ram), AL ç‚ºè®€å¹¾å€‹ sector
 	mov     $AX, %ax		# service 2, nr of sectors
-	int	$0x13			    # read it                   # INT 13H/AH=02H¡GÅª¨úºÏ°Ï
+	int	$0x13			    # read it                   # INT 13H/AH=02Hï¼šè®€å–ç£å€
 	jnc	ok_load_setup		# ok - continue
 	
-	#¤Ureset disk cmd ¤§«á¡A¦b¸õ¨ì³Ì«e­±¡A¬İ°_¨Ó¨S¦³°h¸ô¡AÅª¨ì¦¨¥\¬°¤î¡A§_«h´N¬O¦º´`Àô
+	#ä¸‹reset disk cmd ä¹‹å¾Œï¼Œåœ¨è·³åˆ°æœ€å‰é¢ï¼Œçœ‹èµ·ä¾†æ²’æœ‰é€€è·¯ï¼Œè®€åˆ°æˆåŠŸç‚ºæ­¢ï¼Œå¦å‰‡å°±æ˜¯æ­»å¾ªç’°
 	mov	$0x0000, %dx
 	mov	$0x0000, %ax		# reset the diskette
 	int	$0x13
@@ -92,21 +92,21 @@ ok_load_setup:
 	int	$0x13
 	mov	$0x00, %ch
 	#seg cs
-	mov	%cx, %cs:sectors+0  # %cs means sectors is in %cs , # §âCXªº¤º®e(¤]´N¬Ocy»P sec per track)¦s¦bcs:sectors+0 ¤¤¡Asector ¬°¤@¦ì¸m¡A¦b³Ì¤U­±¦³©w¸q
-	mov	$INITSEG, %ax       # INITSEGªº­È¬°0x9000
+	mov	%cx, %cs:sectors+0  # %cs means sectors is in %cs , # æŠŠCXçš„å…§å®¹(ä¹Ÿå°±æ˜¯cyèˆ‡ sec per track)å­˜åœ¨cs:sectors+0 ä¸­ï¼Œsector ç‚ºä¸€ä½ç½®ï¼Œåœ¨æœ€ä¸‹é¢æœ‰å®šç¾©
+	mov	$INITSEG, %ax       # INITSEGçš„å€¼ç‚º0x9000
 	mov	%ax, %es
 
 # Print some inane message
-	# ¨Ï¥Îint10, AH=3 ¥ıÅª¨ú cursor¦ì¸m«á¡A¦A¥H¥Ø«e¦ì¸m¼g¤J,(CX¡BDX)¡×¹Ï§Î§¤¼Ğ¦C(X)¡B¦æ(Y)
+	# ä½¿ç”¨int10, AH=3 å…ˆè®€å– cursorä½ç½®å¾Œï¼Œå†ä»¥ç›®å‰ä½ç½®å¯«å…¥,(CXã€DX)ï¼åœ–å½¢åæ¨™åˆ—(X)ã€è¡Œ(Y)
 	mov	$0x03, %ah		# read cursor pos
-	xor	%bh, %bh        # BH²M¦¨0
-	int	$0x10           # AH=03H/INT 10H ¡A(CX¡BDX)¡×¹Ï§Î§¤¼Ğ¦C(X)¡B¦æ(Y)
+	xor	%bh, %bh        # BHæ¸…æˆ0
+	int	$0x10           # AH=03H/INT 10H ï¼Œ(CXã€DX)ï¼åœ–å½¢åæ¨™åˆ—(X)ã€è¡Œ(Y)
 	
 	mov	$24, %cx
 	mov	$0x0007, %bx		# page 0, attribute 7 (normal)
 	#lea	msg1, %bp
-	mov     $msg1, %bp      # ES:BP = Offset of string, Åã¥Üload system..
-	mov	$0x1301, %ax		# write string, move cursor  # AH=13:¦bTeletype¼Ò¦¡¤UÅã¥Ü¦r²Å¦ê, AL¡×¹³¯À­È
+	mov     $msg1, %bp      # ES:BP = Offset of string, é¡¯ç¤ºload system..
+	mov	$0x1301, %ax		# write string, move cursor  # AH=13:åœ¨Teletypeæ¨¡å¼ä¸‹é¡¯ç¤ºå­—ç¬¦ä¸², ALï¼åƒç´ å€¼
 	int	$0x10
 
 # ok, we've written the message, now
@@ -114,7 +114,7 @@ ok_load_setup:
 
 	mov	$SYSSEG, %ax    # SYSSEG=0x1000,  system loaded at 0x10000 (65536)64k.
 	mov	%ax, %es		# segment of 0x010000
-	call	read_it     # read_it ¦b¤U­±
+	call	read_it     # read_it åœ¨ä¸‹é¢
 	call	kill_motor
 
 # After that we check which root-device to use. If the device is
@@ -123,9 +123,9 @@ ok_load_setup:
 # on the number of sectors that the BIOS reports currently.
 
 	#seg cs
-	mov	%cs:root_dev+0, %ax  # root_dev ¨Ï¥Îcode ªº¤è¦¡ hard code, ¹w³]­È¬° 0x301
-	cmp	$0, %ax              # ÀË¬d¸Óª½¬O§_¬° 0   
-	jne	root_defined         # jne (jump not equal) 	¤£µ¥©ó«hÂà²¾ 	ÀË¬d zf=0
+	mov	%cs:root_dev+0, %ax  # root_dev ä½¿ç”¨code çš„æ–¹å¼ hard code, é è¨­å€¼ç‚º 0x301
+	cmp	$0, %ax              # æª¢æŸ¥è©²ç›´æ˜¯å¦ç‚º 0   
+	jne	root_defined         # jne (jump not equal) 	ä¸ç­‰æ–¼å‰‡è½‰ç§» 	æª¢æŸ¥ zf=0
 	#seg cs
 	mov	%cs:sectors+0, %bx
 	mov	$0x0208, %ax		# /dev/ps0 - 1.2Mb
@@ -144,7 +144,7 @@ root_defined:
 # the setup-routine loaded directly after
 # the bootblock:
 
-	ljmp	$SETUPSEG, $0  # ¸õ¨ì0x90200¡A°õ¦æsetup.S
+	ljmp	$SETUPSEG, $0  # è·³åˆ°0x90200ï¼ŒåŸ·è¡Œsetup.S
 
 # This routine loads the system at address 0x10000, making sure
 # no 64kB boundaries are crossed. We try to load it as fast as
@@ -157,18 +157,18 @@ head:	.word 0			# current head
 track:	.word 0			# current track
 
 read_it:
-	mov	%es, %ax            # es¤w¸g³Q³]©w¬° 0x1000
-	test	$0x0fff, %ax    # ´ú¸Õ es ¬O§_¬° 0x1000
+	mov	%es, %ax            # eså·²ç¶“è¢«è¨­å®šç‚º 0x1000
+	test	$0x0fff, %ax    # æ¸¬è©¦ es æ˜¯å¦ç‚º 0x1000
 die:	jne 	die			# es must be at 64kB boundary
 	xor 	%bx, %bx		# bx is starting address within segment
 rp_read:
 	mov 	%es, %ax
- 	cmp 	$ENDSEG, %ax	# have we loaded all yet? # sys_start = 0x1000, sts_end = 0x3000 ¡A©Ò¥H¤j¤p¬°100­Ósector?
+ 	cmp 	$ENDSEG, %ax	# have we loaded all yet? # sys_start = 0x1000, sts_end = 0x3000 ï¼Œæ‰€ä»¥å¤§å°ç‚º100å€‹sector?
 	jb	ok1_read
 	ret
 ok1_read:
 	#seg cs
-	mov	%cs:sectors+0, %ax   # Åª¨ú¤§«eªº secPerTrack
+	mov	%cs:sectors+0, %ax   # è®€å–ä¹‹å‰çš„ secPerTrack
 	sub	sread, %ax           # sread = sread - ax 
 	mov	%ax, %cx
 	shl	$9, %cx
