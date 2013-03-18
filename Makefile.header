@@ -6,7 +6,7 @@
 AS	= as --32
 LD	= ld
 LDFLAGS = -m elf_i386 -x 
-CC	= gcc
+CC	= gcc -fno-stack-protector
 CFLAGS  = -g -m32 -fno-builtin -fomit-frame-pointer -fstrength-reduce #-Wall
 
 CPP	= cpp -nostdinc
