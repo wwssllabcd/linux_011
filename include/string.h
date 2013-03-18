@@ -24,6 +24,17 @@ extern char * strerror(int errno);
  *		(C) 1991 Linus Torvalds
  */
  
+/*
+__asm__("cld\n"
+	"1:\tlodsb\n\t"         // lodsb 指令:從esi 指向的源地址中逐一讀取一個字符,送入AL 中;
+	"stosb\n\t"             // stosb 指令:一般跟隨在lodsb 指令後面,將AL 中的字符逐一寫入edi 指向的目的地址;
+	"testb %%al,%%al\n\t"   // test bit
+	"jne 1b"                // 跳到 標記1
+	::"S" (src),"D" (dest));// 由上面得知，也就是說，copy string 要一個放esi， 一個放edi，所以這邊參數就是S與D
+return dest;
+
+ */
+ 
 extern inline char * strcpy(char * dest,const char *src)
 {
 __asm__("cld\n"

@@ -57,6 +57,11 @@
 
 #ifdef __LIBRARY__
 
+/*
+這邊定義了 system_call的種類, 其中read 為3, open為5
+都是利用int $0x80進行中斷,而中斷的種類由eax來判斷, 中斷呼叫的參數會放在b,c,d中 
+*/
+
 #define __NR_setup	0	/* used only by init, to get system going */
 #define __NR_exit	1
 #define __NR_fork	2
@@ -129,6 +134,12 @@
 #define __NR_ssetmask	69
 #define __NR_setreuid	70
 #define __NR_setregid	71
+
+/* 
+以下的__asm__表asm code從這邊開始，以下的asm可以看成  __asm__ volatile ("int $0x80" : "=a" (__res) : "0" (__NR_fork));
+ : "=a" (__res) ，代表asm結束之後，把 eax 的值(a=eax, b=ebx..以此類推)，設給__res這個變數
+ _syscall0利用了define產生一個 0參數的function 
+*/
 
 #define _syscall0(type,name) \
   type name(void) \

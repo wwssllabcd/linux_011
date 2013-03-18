@@ -1,6 +1,7 @@
 #ifndef _SCHED_H
 #define _SCHED_H
 
+// NR_TASK 可能GDT可存放幾個task,這裡的 64遠小於086所提供的8192 segment selector in GDT的大小
 #define NR_TASKS 64
 #define HZ 100
 

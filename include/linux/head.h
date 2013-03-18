@@ -2,7 +2,7 @@
 #define _HEAD_H
 
 typedef struct desc_struct {
-	unsigned long a,b;
+	unsigned long a,b; //idt 是屬於desc_table, 每一個都佔8BYTE
 } desc_table[256];
 
 extern unsigned long pg_dir[1024];
