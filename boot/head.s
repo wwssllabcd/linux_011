@@ -22,7 +22,7 @@ startup_32:
 	mov %ax,%fs
 	mov %ax,%gs
 	lss stack_start,%esp
-	call setup_idt
+	call setup_idt          # 初始IDT, 即把每個interrup都填成ignore_int(即unknow interrup)的位置
 	call setup_gdt
 	movl $0x10,%eax		# reload all the segment registers
 	mov %ax,%ds		# after changing gdt. CS was already
@@ -84,14 +84,14 @@ setup_idt:
 	movw $0x8E00,%dx	/* interrupt gate - dpl=0, present */
 
 	lea idt,%edi
-	mov $256,%ecx
+	mov $256,%ecx          /* 設置repeat 256次, 因為idt最多256個 */
 rp_sidt:
-	movl %eax,(%edi)
+	movl %eax,(%edi)       /* edi為 idt的位置所在 */
 	movl %edx,4(%edi)
-	addl $8,%edi
-	dec %ecx
+	addl $8,%edi           /* 移動edi+=8 */
+	dec %ecx               /* ecx為次數 */
 	jne rp_sidt
-	lidt idt_descr
+	lidt idt_descr         /* load idt table的位置到iDPTR */
 	ret
 
 /*
@@ -139,7 +139,7 @@ after_page_tables:
 	pushl $0
 	pushl $0
 	pushl $L6		# return address for main, if it decides to.
-	pushl $main
+	pushl $main     	# 預計返回的時候跳到main ?
 	jmp setup_paging
 L6:
 	jmp L6			# main should never return here, but
@@ -150,10 +150,10 @@ int_msg:
 	.asciz "Unknown interrupt\n\r"
 .align 2
 ignore_int:
-	pushl %eax
+	pushl %eax  # backup register
 	pushl %ecx
-	pushl %edx
-	push %ds
+	pushl %edx  # end backup
+	push %ds    # backup segment register
 	push %es
 	push %fs
 	movl $0x10,%eax
@@ -166,7 +166,7 @@ ignore_int:
 	pop %fs
 	pop %es
 	pop %ds
-	popl %edx
+	popl %edx   # restore register
 	popl %ecx
 	popl %eax
 	iret
@@ -239,3 +239,19 @@ gdt:	.quad 0x0000000000000000	/* NULL descriptor */
 	.quad 0x00c0920000000fff	/* 16Mb */
 	.quad 0x0000000000000000	/* TEMPORARY - don't use */
 	.fill 252,8,0			/* space for LDT's and TSS's etc */
+
+/*
+設定GDT, 每條Segment Descriptor 各8 BYTE, 如0x00c0,9a00,0000,0fff
+LSM的最後16 bit為限制長度，這邊為0x0FFF代表限制4096個單位，也就是 4k*4096 = 16M
+
+第0個段為NULL(規定)
+第1個段的參數為0x9A，可知為 可執行/可讀的 code段
+第2個段的參數為0x92，可知為 可讀/寫的 data段
+
+而這兩個段的base都是指向0的位置
+*/
+
+
+
+
+
