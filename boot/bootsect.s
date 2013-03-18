@@ -42,20 +42,22 @@
 
 # ROOT_DEV:	0x000 - same type of floppy as boot.
 #		0x301 - first partition on first drive etc
-	.equ ROOT_DEV, 0x301
-	ljmp    $BOOTSEG, $_start
+	.equ ROOT_DEV, 0x301       # 這邊代表要讀取那個裝置，0x301是讀取/dev/hda1，也可以替換其他裝置
+	ljmp    $BOOTSEG, $_start  # 這邊一個是CS(BOOTSEG), 一個是EIP(_start)
 _start:
-	mov	$BOOTSEG, %ax
+	#接下來就是把自己移動到 0x9000的位置，為何要移動，是因為setup.S將參數表保存到那裡而預留空間
+	mov	$BOOTSEG, %ax          # 把0x07C0 設給 ds, 把0x9000設給 es, 等下copy 的時候，會用到源地址的組合是 ds:si, 相應的目標地址為 es:di
 	mov	%ax, %ds
 	mov	$INITSEG, %ax
 	mov	%ax, %es
-	mov	$256, %cx
-	sub	%si, %si
+	mov	$256, %cx              # cx register通常拿來當counter, 也就是for loop中的 i
+	sub	%si, %si               # sub 是暫存器相減，這裡的意思同 xor %si, %si, 也就是si相減，清成0
 	sub	%di, %di
-	rep	
-	movsw
-	ljmp	$INITSEG, $go
-go:	mov	%cs, %ax
+	rep	                       # rep為repeat指令，他會根據CX值，當作repeat的次數
+	movsw                      # movw AT&T 語法 是隱含操作數的，從 [ds:si]->[es:si], Intel語法好像是 movsw, 也就是copy data從 0x7C0到0x9000，相較於MOVSB，MOVSW是以WORD為單位
+	ljmp	$INITSEG, $go      # 跳到  INITSEG:go  處，也就是不但把自己移到0x9000之外，也把目前執行處，從0x7Cxx移到0x90XX之後，接續著做下去
+
+go:	mov	%cs, %ax               # copy完成後，把ds, es, ss 重設成 cs ( 0x9000) 
 	mov	%ax, %ds
 	mov	%ax, %es
 # put stack at 0x9ff00.
@@ -64,15 +66,18 @@ go:	mov	%cs, %ax
 
 # load the setup-sectors directly after the bootblock.
 # Note that 'es' is already set up.
-
+# 準備讀取sec 2 出來，此時sec 2 是放置 setup.S 的 code
+# 使用int 13時，放置 data的地方是以 ES:BX 來代表
 load_setup:
 	mov	$0x0000, %dx		# drive 0, head 0
-	mov	$0x0002, %cx		# sector 2, track 0
-	mov	$0x0200, %bx		# address = 512, in INITSEG
-	.equ    AX, 0x0200+SETUPLEN
+	mov	$0x0002, %cx		# sector 2, track 0         # 把 sec 2 讀出來(chs mode 是以sec 1 作為開始)
+	mov	$0x0200, %bx		# address = 512, in INITSEG # address = ES*0x10 + BX, ES:BX 指向該service要存放在哪,由此可知這邊是要把data讀出來放到0x90200的位置
+	.equ    AX, 0x0200+SETUPLEN                         # 這邊的值為0x0204, AH是0x02號 service (把data放到ram), AL 為讀幾個 sector
 	mov     $AX, %ax		# service 2, nr of sectors
-	int	$0x13			# read it
+	int	$0x13			    # read it                   # INT 13H/AH=02H：讀取磁區
 	jnc	ok_load_setup		# ok - continue
+	
+	#下reset disk cmd 之後，在跳到最前面，看起來沒有退路，讀到成功為止，否則就是死循環
 	mov	$0x0000, %dx
 	mov	$0x0000, %ax		# reset the diskette
 	int	$0x13
@@ -82,34 +87,34 @@ ok_load_setup:
 
 # Get disk drive parameters, specifically nr of sectors/track
 
-	mov	$0x00, %dl
+	mov	$0x00, %dl          # DL= drive No, int 13, AH=8 = get param
 	mov	$0x0800, %ax		# AH=8 is get drive parameters
 	int	$0x13
 	mov	$0x00, %ch
 	#seg cs
-	mov	%cx, %cs:sectors+0	# %cs means sectors is in %cs
-	mov	$INITSEG, %ax
+	mov	%cx, %cs:sectors+0  # %cs means sectors is in %cs , # 把CX的內容(也就是cy與 sec per track)存在cs:sectors+0 中，sector 為一位置，在最下面有定義
+	mov	$INITSEG, %ax       # INITSEG的值為0x9000
 	mov	%ax, %es
 
 # Print some inane message
-
+	# 使用int10, AH=3 先讀取 cursor位置後，再以目前位置寫入,(CX、DX)＝圖形坐標列(X)、行(Y)
 	mov	$0x03, %ah		# read cursor pos
-	xor	%bh, %bh
-	int	$0x10
+	xor	%bh, %bh        # BH清成0
+	int	$0x10           # AH=03H/INT 10H ，(CX、DX)＝圖形坐標列(X)、行(Y)
 	
 	mov	$24, %cx
 	mov	$0x0007, %bx		# page 0, attribute 7 (normal)
 	#lea	msg1, %bp
-	mov     $msg1, %bp
-	mov	$0x1301, %ax		# write string, move cursor
+	mov     $msg1, %bp      # ES:BP = Offset of string, 顯示load system..
+	mov	$0x1301, %ax		# write string, move cursor  # AH=13:在Teletype模式下顯示字符串, AL＝像素值
 	int	$0x10
 
 # ok, we've written the message, now
 # we want to load the system (at 0x10000)
 
-	mov	$SYSSEG, %ax
+	mov	$SYSSEG, %ax    # SYSSEG=0x1000,  system loaded at 0x10000 (65536)64k.
 	mov	%ax, %es		# segment of 0x010000
-	call	read_it
+	call	read_it     # read_it 在下面
 	call	kill_motor
 
 # After that we check which root-device to use. If the device is
@@ -118,9 +123,9 @@ ok_load_setup:
 # on the number of sectors that the BIOS reports currently.
 
 	#seg cs
-	mov	%cs:root_dev+0, %ax
-	cmp	$0, %ax
-	jne	root_defined
+	mov	%cs:root_dev+0, %ax  # root_dev 使用code 的方式 hard code, 預設值為 0x301
+	cmp	$0, %ax              # 檢查該直是否為 0   
+	jne	root_defined         # jne (jump not equal) 	不等於則轉移 	檢查 zf=0
 	#seg cs
 	mov	%cs:sectors+0, %bx
 	mov	$0x0208, %ax		# /dev/ps0 - 1.2Mb
@@ -139,7 +144,7 @@ root_defined:
 # the setup-routine loaded directly after
 # the bootblock:
 
-	ljmp	$SETUPSEG, $0
+	ljmp	$SETUPSEG, $0  # 跳到0x90200，執行setup.S
 
 # This routine loads the system at address 0x10000, making sure
 # no 64kB boundaries are crossed. We try to load it as fast as
@@ -152,19 +157,19 @@ head:	.word 0			# current head
 track:	.word 0			# current track
 
 read_it:
-	mov	%es, %ax
-	test	$0x0fff, %ax
+	mov	%es, %ax            # es已經被設定為 0x1000
+	test	$0x0fff, %ax    # 測試 es 是否為 0x1000
 die:	jne 	die			# es must be at 64kB boundary
 	xor 	%bx, %bx		# bx is starting address within segment
 rp_read:
 	mov 	%es, %ax
- 	cmp 	$ENDSEG, %ax		# have we loaded all yet?
+ 	cmp 	$ENDSEG, %ax	# have we loaded all yet? # sys_start = 0x1000, sts_end = 0x3000 ，所以大小為100個sector?
 	jb	ok1_read
 	ret
 ok1_read:
 	#seg cs
-	mov	%cs:sectors+0, %ax
-	sub	sread, %ax
+	mov	%cs:sectors+0, %ax   # 讀取之前的 secPerTrack
+	sub	sread, %ax           # sread = sread - ax 
 	mov	%ax, %cx
 	shl	$9, %cx
 	add	%bx, %cx
