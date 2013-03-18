@@ -25,6 +25,7 @@ extern void rs2_interrupt(void);
 
 static void init(int port)
 {
+	//送0x80到port+3
 	outb_p(0x80,port+3);	/* set DLAB of line control reg */
 	outb_p(0x30,port);	/* LS of divisor (48 -> 2400 bps */
 	outb_p(0x00,port+1);	/* MS of divisor */
@@ -36,6 +37,7 @@ static void init(int port)
 
 void rs_init(void)
 {
+	//中斷第0x24號, type為14, rs1_interrupt是一個function
 	set_intr_gate(0x24,rs1_interrupt);
 	set_intr_gate(0x23,rs2_interrupt);
 	init(tty_table[1].read_q.data);
