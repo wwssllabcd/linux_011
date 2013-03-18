@@ -22,7 +22,14 @@
  */
 static inline fork(void) __attribute__((always_inline));
 static inline pause(void) __attribute__((always_inline));
+
+// _syscall0為一define, 傳入type與name
+// 也就是說，利用define的方式，做一個類似template，把fork,pause,setup,sync這四個function建立起來
+// 舉fork來說，_syscall0建立了一個 int fork()的function
 static inline _syscall0(int,fork)
+// Linux 的系統調用中斷0x80。該中斷是所有系統調用的
+// 入口。該條語句實際上是int fork()創建進程系統調用。
+// syscall0 名稱中最後的0 表示無參數，1 表示1 個參數。
 static inline _syscall0(int,pause)
 static inline _syscall1(int,setup,void *,BIOS)
 static inline _syscall0(int,sync)
@@ -87,6 +94,8 @@ static void time_init(void)
 		time.tm_mon = CMOS_READ(8);
 		time.tm_year = CMOS_READ(9);
 	} while (time.tm_sec != CMOS_READ(0));
+	//一定要在一秒之內完成 time 結構
+
 	BCD_TO_BIN(time.tm_sec);
 	BCD_TO_BIN(time.tm_min);
 	BCD_TO_BIN(time.tm_hour);
@@ -101,6 +110,7 @@ static long memory_end = 0;
 static long buffer_memory_end = 0;
 static long main_memory_start = 0;
 
+//第一個drive_info為type, 第二個drive_info為變數，而drive_info是對應到0x90080的資訊
 struct drive_info { char dummy[32]; } drive_info;
 
 void main(void)		/* This really IS void, no error here. */
@@ -111,22 +121,30 @@ void main(void)		/* This really IS void, no error here. */
  */
 
  	ROOT_DEV = ORIG_ROOT_DEV;
- 	drive_info = DRIVE_INFO;
+ 	drive_info = DRIVE_INFO; // 把0x90080的RAM addr解釋成drive_info(0x90080是存放硬碟參數表)
 	memory_end = (1<<20) + (EXT_MEM_K<<10);
 	memory_end &= 0xfffff000;
+
+	//linux 0.11系統最大16MB
 	if (memory_end > 16*1024*1024)
 		memory_end = 16*1024*1024;
+		//這邊缺buffer_memory_end的初始值??(buffer_memory_end的初值為0)
 	if (memory_end > 12*1024*1024) 
+		//buffer_memory_end乃高速緩衝區的結尾，見linux內核完全註釋P-660
 		buffer_memory_end = 4*1024*1024;
 	else if (memory_end > 6*1024*1024)
 		buffer_memory_end = 2*1024*1024;
 	else
-		buffer_memory_end = 1*1024*1024;
+		buffer_memory_end = 1*1024*1024;//小於6MB記憶體的話
+
+	//根據機器記憶體大小不同, 調整main_memory_start的start addr
 	main_memory_start = buffer_memory_end;
 #ifdef RAMDISK
 	main_memory_start += rd_init(main_memory_start, RAMDISK*1024);
 #endif
-	mem_init(main_memory_start,memory_end);
+
+	// 初始化記憶體的chain, 也就是初始化"mem_map"這個buffer
+	mem_init(main_memory_start,memory_end); // memory_end 看來是total memory的位置
 	trap_init();
 	blk_dev_init();
 	chr_dev_init();
@@ -136,8 +154,14 @@ void main(void)		/* This really IS void, no error here. */
 	buffer_init(buffer_memory_end);
 	hd_init();
 	floppy_init();
+
+	//Set Interrupt Flag(STI)開啟中斷。
 	sti();
+
+	//切換到x86 user mode
 	move_to_user_mode();
+
+	//fork其實是用 _syscall0產生出來的(_syscall0代表沒有參數)
 	if (!fork()) {		/* we count on this going ok */
 		init();
 	}
@@ -148,6 +172,11 @@ void main(void)		/* This really IS void, no error here. */
  * can run). For task0 'pause()' just means we go check if some other
  * task can run, and if not we return here.
  */
+	 /* 注意!! 對於任何其它的任務，'pause()'將意味著我們必須等待收到一個信號才會返
+	   * 回就緒運行態，但任務0（task0）是唯一的意外情況（參見'schedule()'），因為任務0 在
+	   * 任何空閒時間裡都會被激活（當沒有其它任務在運行時），因此對於任務0'pause()'僅意味著
+	   * 我們返回來查看是否有其它任務可以運行，如果沒有的話我們就回到這裡，一直循環執行'pause()'。
+	   */
 	for(;;) pause();
 }
 
@@ -174,19 +203,30 @@ void init(void)
 
 	setup((void *) &drive_info);
 	(void) open("/dev/tty0",O_RDWR,0);
-	(void) dup(0);
-	(void) dup(0);
-	printf("%d buffers = %d bytes buffer space\n\r",NR_BUFFERS,
-		NR_BUFFERS*BLOCK_SIZE);
+	(void) dup(0);  //複製handle，產生handle1, stdout
+	(void) dup(0);  //複製handle，產生handle2, stderr
+	//這兩段會顯示在tty上面
+	printf("%d buffers = %d bytes buffer space\n\r",NR_BUFFERS, NR_BUFFERS*BLOCK_SIZE);
 	printf("Free mem: %d bytes\n\r",memory_end-main_memory_start);
+
+	//利用fork來複製一個子進程
 	if (!(pid=fork())) {
-		close(0);
+		close(0); //關閉handle_0(也就是stdin)
+
+		//以唯讀的方式打開etc/rc，etc/rc有點類似autoexec.bat這個檔案
 		if (open("/etc/rc",O_RDONLY,0))
 			_exit(1);
+		//子進程把自身變成shell後，執行shell，而該shell的參數分別為argv_rc,envp_rc(為固定值)
 		execve("/bin/sh",argv_rc,envp_rc);
+
+		//關閉handle0並且馬上打開/etc/rc是為了把stdin重新定到/etc/rc
+		//而在執行rc文件後就會立刻退出，process2也就結束了
 		_exit(2);
 	}
+
+	//這邊還是父進程(process(1))執行的地方
 	if (pid>0)
+		//父進程等待子進程結束，&i保存了子進程的result
 		while (pid != wait(&i))
 			/* nothing */;
 	while (1) {

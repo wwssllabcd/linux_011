@@ -350,14 +350,18 @@ struct buffer_head * breada(int dev,int first, ...)
 
 void buffer_init(long buffer_end)
 {
+	//start_buffer為end的後一個
 	struct buffer_head * h = start_buffer;
 	void * b;
 	int i;
 
+	//如果剛好為1M，則跳到640k處
 	if (buffer_end == 1<<20)
 		b = (void *) (640*1024);
 	else
 		b = (void *) buffer_end;
+
+	//h由前往後，b由後往前，當交會時，則代表配置完成
 	while ( (b -= BLOCK_SIZE) >= ((void *) (h+1)) ) {
 		h->b_dev = 0;
 		h->b_dirt = 0;
@@ -372,6 +376,8 @@ void buffer_init(long buffer_end)
 		h->b_next_free = h+1;
 		h++;
 		NR_BUFFERS++;
+
+		//因為buffer從640k ~ 1M的地方是BIOS ROM與 顯存的地方，所以不能使用
 		if (b == (void *) 0x100000)
 			b = (void *) 0xA0000;
 	}
@@ -379,6 +385,8 @@ void buffer_init(long buffer_end)
 	free_list = start_buffer;
 	free_list->b_prev_free = h;
 	h->b_next_free = free_list;
+
+	//hash table使用質數307當作大小
 	for (i=0;i<NR_HASH;i++)
 		hash_table[i]=NULL;
 }	
