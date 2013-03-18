@@ -29,7 +29,7 @@
 	begbss:
 	.text
 
-	ljmp $SETUPSEG, $_start	
+	ljmp $SETUPSEG, $_start	 # setup.s是放在 0x90200的位置
 _start:
 
 # ok, the read went well so we get current cursor position and save it for
@@ -39,17 +39,17 @@ _start:
 	mov	%ax, %ds
 	mov	$0x03, %ah	# read cursor pos
 	xor	%bh, %bh
-	int	$0x10		# save it in known place, con_init fetches
-	mov	%dx, %ds:0	# it from 0x90000.
+	int	$0x10		# save it in known place, con_init fetches # 使用int10, AH=3 先讀取 cursor 位置
+	mov	%dx, %ds:0	# it from 0x90000.                         # 把 DX(Y軸) 存入 0x90000 的位置
 # Get memory size (extended mem, kB)
 
-	mov	$0x88, %ah 
+	mov	$0x88, %ah      # int 15, AH = 0x88, 取得記憶體大小
 	int	$0x15
-	mov	%ax, %ds:2
+	mov	%ax, %ds:2      # 0x90002
 
 # Get video-card data:
 
-	mov	$0x0f, %ah
+	mov	$0x0f, %ah      # int 10, AH= 0x0F = Get current video mode, return AL = Video Mode
 	int	$0x10
 	mov	%bx, %ds:4	# bh = display page
 	mov	%ax, %ds:6	# al = video mode, ah = window width
@@ -70,10 +70,10 @@ _start:
 	lds	%ds:4*0x41, %si
 	mov	$INITSEG, %ax
 	mov	%ax, %es
-	mov	$0x0080, %di
-	mov	$0x10, %cx
+	mov	$0x0080, %di   # 目的地ES:DI = 0x90080
+	mov	$0x10, %cx     # cx register通常拿來當counter, 也就是for loop中的 i
 	rep
-	movsb
+	movsb                  # 從 DS:SI->ES:DI
 
 # Get hd1 data
 
@@ -89,20 +89,20 @@ _start:
 
 # Check that there IS a hd1 :-)
 
-	mov	$0x01500, %ax
-	mov	$0x81, %dl
+	mov	$0x01500, %ax   # int 15, AH = 15 => Read Drive Type
+	mov	$0x81, %dl      # DL = drive number (0=A:, 1=2nd floppy, 80h=drive 0, 81h=drive 1)
 	int	$0x13
-	jc	no_disk1
-	cmp	$3, %ah
+	jc	no_disk1        # CF = 0 if successful, CF = 1 if error
+	cmp	$3, %ah         # AH = 03, fixed disk present
 	je	is_disk1
 no_disk1:
 	mov	$INITSEG, %ax
 	mov	%ax, %es
-	mov	$0x0090, %di
-	mov	$0x10, %cx
-	mov	$0x00, %ax
+	mov	$0x0090, %di    # ES:DI = 0x90090
+	mov	$0x10, %cx      # 當作 stosb 的 count
+	mov	$0x00, %ax      # 準備要把ES:DI存成0
 	rep
-	stosb
+	stosb   # STOSB 是將 AX 存放到 ES:DI 的位置，並根據 DF 來遞增 (DF = 0) 或遞減 (DF = 1) DI，以指向下一個位置
 is_disk1:
 
 # now we want to move to protected mode ...
@@ -114,23 +114,23 @@ is_disk1:
 	mov	$0x0000, %ax
 	cld			# 'direction'=0, movs moves forward
 do_move:
-	mov	%ax, %es	# destination segment
+	mov	%ax, %es	# destination segment   # ES設為0
 	add	$0x1000, %ax
 	cmp	$0x9000, %ax
 	jz	end_move
 	mov	%ax, %ds	# source segment
 	sub	%di, %di
 	sub	%si, %si
-	mov 	$0x8000, %cx
+	mov $0x8000, %cx  	# cx當作cnt, 以word方式來移動，也就是移64k?
 	rep
-	movsw
+	movsw             	# 從 [ds:si]->[es:di] ，看來有點像是把 0x10000~0x18000 移到 0x0000~0x8000
 	jmp	do_move
 
 # then we load the segment descriptors
 
 end_move:
-	mov	$SETUPSEG, %ax	# right, forgot this at first. didn't work :-)
-	mov	%ax, %ds
+	mov	$SETUPSEG, %ax	# right, forgot this at first. didn't work :-)  //0x9020
+	mov	%ax, %ds        # ds 設為 0x9020
 	lidt	idt_48		# load idt with 0,0
 	lgdt	gdt_48		# load gdt with whatever appropriate
 
@@ -212,7 +212,7 @@ empty_8042:
 	jnz	empty_8042	# yes - loop
 	ret
 
-gdt:
+gdt:    # gdt table 目前設定如下
 	.word	0,0,0,0		# dummy
 
 	.word	0x07FF		# 8Mb - limit=2047 (2048*4096=8Mb)
@@ -231,7 +231,8 @@ idt_48:
 
 gdt_48:
 	.word	0x800			# gdt limit=2048, 256 GDT entries
-	.word   512+gdt, 0x9		# gdt base = 0X9xxxx, 
+	.word   512+gdt, 0x9	# gdt base = 0X9xxxx,   # 加 512的原因是否為 0x90200 的 0x200，也就是 setup.s的位置
+							# 逗號代表連續賦值
 	# 512+gdt is the real gdt after setup is moved to 0x9020 * 0x10
 	
 .text
