@@ -40,7 +40,7 @@ static inline void oom(void)
 __asm__("movl %%eax,%%cr3"::"a" (0))
 
 /* these are not to be changed without changing head.s etc */
-#define LOW_MEM 0x100000
+#define LOW_MEM 0x100000 // 1M
 #define PAGING_MEMORY (15*1024*1024)
 #define PAGING_PAGES (PAGING_MEMORY>>12)
 #define MAP_NR(addr) (((addr)-LOW_MEM)>>12)
@@ -88,12 +88,17 @@ return __res;
  */
 void free_page(unsigned long addr)
 {
+	//LOW_MEM = 1M
 	if (addr < LOW_MEM) return;
 	if (addr >= HIGH_MEMORY)
 		panic("trying to free nonexistent page");
 	addr -= LOW_MEM;
 	addr >>= 12;
+
+	// 如果還有參考，則直接return(先判斷其值，後才做--的動作)
 	if (mem_map[addr]--) return;
+
+	//如果原本就是0，則先設為0，再跳出警告
 	mem_map[addr]=0;
 	panic("trying to free free page");
 }
@@ -155,6 +160,7 @@ int copy_page_tables(unsigned long from,unsigned long to,long size)
 	unsigned long * from_dir, * to_dir;
 	unsigned long nr;
 
+	//限制from 與to 是否沒有與4MB align
 	if ((from&0x3fffff) || (to&0x3fffff))
 		panic("copy_page_tables called with wrong alignment");
 	from_dir = (unsigned long *) ((from>>20) & 0xffc); /* _pg_dir = 0 */
@@ -402,13 +408,27 @@ void mem_init(long start_mem, long end_mem)
 	int i;
 
 	HIGH_MEMORY = end_mem;
+	//把15MB以前的都設為used( 1M以前的是kernel + video BIOS + etc 加起來共16MB)
+	//而linux 0.11最多支援16MB內存, 而PAGING_PAGES是以4k(向右shift 12)為管理單位
+	//這邊用一個mem_map去對應整個15MB的記憶體位置(以4k為單位)
+	//這個for 迴圈是把mem_map整個初始化成used
 	for (i=0 ; i<PAGING_PAGES ; i++)
-		mem_map[i] = USED;
+		mem_map[i] = USED; // mem_map是從1M之後，最大15M
+
+	//start_mem減去1M，在除以4k，算出有幾個page，因為mem_map不包含內核1M的管理
+	// i 為start的點，記憶體配置應為右圖 ( |----1M---|-start----------end-|，Total最多16MB )
 	i = MAP_NR(start_mem);
 	end_mem -= start_mem;
+
+	//算出這台機器, 有幾個page可以使用
 	end_mem >>= 12;
+
+	//mem_map代表內存被佔用的次數, 而變數i代表
+	//因為mem_map不包含前面1MB,所以這邊的i代表"不包含前面1MB"的start addr
 	while (end_mem-->0)
-		mem_map[i++]=0;
+		mem_map[i++]=0; //設成0，代表內存空閒, 沒設到的自然就是used了
+
+
 }
 
 void calc_mem(void)
