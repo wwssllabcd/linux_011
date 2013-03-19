@@ -97,10 +97,10 @@ ok_load_setup:
 	mov	%ax, %es
 
 # Print some inane message
-	# 使用int10, AH=3 先讀取 cursor位置後，再以目前位置寫入,(CX、DX)＝圖形坐標列(X)、行(Y)
+	# 使用int10, AH=3 先讀取 cursor 位置後，再以目前位置寫入, DX ＝ 圖形坐標列(X)、行(Y)
 	mov	$0x03, %ah		# read cursor pos
 	xor	%bh, %bh        # BH清成0
-	int	$0x10           # AH=03H/INT 10H ，(CX、DX)＝圖形坐標列(X)、行(Y)
+	int	$0x10           # AH=03H/INT 10H ，DH = Row, DL = Column
 	
 	mov	$24, %cx
 	mov	$0x0007, %bx		# page 0, attribute 7 (normal)
