@@ -117,16 +117,16 @@ is_disk1:
 	mov	$0x0000, %ax
 	cld			# 'direction'=0, movs moves forward
 do_move:
-	mov	%ax, %es	# destination segment   # ES設為0
-	add	$0x1000, %ax
-	cmp	$0x9000, %ax
+	mov	%ax, %es	  # destination segment   # ES設為0
+	add	$0x1000, %ax  # ax從 0x1000開始，到0x9000結束，每次加0x1000
+	cmp	$0x9000, %ax  # 是否到9000的位置了？
 	jz	end_move
-	mov	%ax, %ds	# source segment
+	mov	%ax, %ds	  # source segment
 	sub	%di, %di
 	sub	%si, %si
 	mov $0x8000, %cx  	# cx當作cnt, 以word方式來移動，也就是移64k?
 	rep
-	movsw             	# 從 [ds:si]->[es:di] ，看來有點像是把 0x10000~0x18000 移到 0x0000~0x8000
+	movsw             	# 從 [ds:si]->[es:di] ，看來有點像是把 0x10000 ~ 0x20000 移到 0x00000 ~ 0x10000, 長度為0x10000個byte
 	jmp	do_move
 
 # then we load the segment descriptors
@@ -215,14 +215,17 @@ empty_8042:
 	jnz	empty_8042	# yes - loop
 	ret
 
-gdt:    # gdt table 目前設定如下
+gdt:    # gdt table 目前設定如下, 每段為8個byte, 例如載入第一段，就是設 cS = 8, 而bit1~bit3拿來當作 flag
+	//段0 = dummy
 	.word	0,0,0,0		# dummy
 
+	//段1
 	.word	0x07FF		# 8Mb - limit=2047 (2048*4096=8Mb)
 	.word	0x0000		# base address=0
 	.word	0x9A00		# code read/exec
 	.word	0x00C0		# granularity=4096, 386
 
+	//段2
 	.word	0x07FF		# 8Mb - limit=2047 (2048*4096=8Mb)
 	.word	0x0000		# base address=0
 	.word	0x9200		# data read/write
