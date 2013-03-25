@@ -65,9 +65,12 @@ _start:
 
 # Get hd0 data
 
+	# 這邊取中斷向量編號 0x41 號的值, 因為一個中斷佔4個byte, 所以No 41h所在的offset其實就是41*4 = 0x104h
+	# 其實 記憶體 0 ~ 0x3FF(共400H) 提供給中斷向量表使用,可搜尋"BIOS中斷向量表 （轉）"關鍵字
+	
 	mov	$0x0000, %ax
 	mov	%ax, %ds
-	lds	%ds:4*0x41, %si
+	lds	%ds:4*0x41, %si  
 	mov	$INITSEG, %ax
 	mov	%ax, %es
 	mov	$0x0080, %di   # 目的地ES:DI = 0x90080
@@ -82,7 +85,7 @@ _start:
 	lds	%ds:4*0x46, %si
 	mov	$INITSEG, %ax
 	mov	%ax, %es
-	mov	$0x0090, %di
+	mov	$0x0090, %di   # 目的地ES:DI = 0x90090
 	mov	$0x10, %cx
 	rep
 	movsb
