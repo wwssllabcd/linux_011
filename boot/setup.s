@@ -124,9 +124,9 @@ do_move:
 	mov	%ax, %ds	  # source segment
 	sub	%di, %di
 	sub	%si, %si
-	mov $0x8000, %cx  	# cx當作cnt, 以word方式來移動，也就是移64k?
+	mov $0x8000, %cx  	# cx當作cnt, 以word方式來移動，也就是一次移動0x10000，到9w為止
 	rep
-	movsw             	# 從 [ds:si]->[es:di] ，看來有點像是把 0x10000 ~ 0x20000 移到 0x00000 ~ 0x10000, 長度為0x10000個byte
+	movsw             	# 從 [ds:si]->[es:di] ，看來有點像是把 0x10000 ~ 0x90000 移到 0x00000 ~ 0x80000, 也就是說內核大小不會超過512k
 	jmp	do_move
 
 # then we load the segment descriptors

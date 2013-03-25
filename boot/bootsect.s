@@ -156,19 +156,21 @@ sread:	.word 1+ SETUPLEN	# sectors read of current track
 head:	.word 0			# current head
 track:	.word 0			# current track
 
+//要把 system從磁碟讀到0x10000的位置
 read_it:
-	mov	%es, %ax            # es已經被設定為 0x1000
+	mov		%es, %ax        # es已經被設定為 0x1000
 	test	$0x0fff, %ax    # 測試 es 是否為 0x1000
-die:	jne 	die			# es must be at 64kB boundary
+die:	
+	jne 	die				# es must be at 64kB boundary(也就是es = 0x1000)
 	xor 	%bx, %bx		# bx is starting address within segment
 rp_read:
 	mov 	%es, %ax
  	cmp 	$ENDSEG, %ax	# have we loaded all yet? # sys_start = 0x1000, sts_end = 0x3000 ，所以大小為100個sector?
-	jb	ok1_read
+	jb		ok1_read
 	ret
 ok1_read:
 	#seg cs
-	mov	%cs:sectors+0, %ax   # 讀取之前的 secPerTrack
+	mov	%cs:sectors+0, %ax   # 讀取之前的 secPerTrack/cylinder
 	sub	sread, %ax           # sread = sread - ax 
 	mov	%ax, %cx
 	shl	$9, %cx
@@ -240,10 +242,10 @@ bad_rt:	mov	$0, %ax
 # */
 kill_motor:
 	push	%dx
-	mov	$0x3f2, %dx
-	mov	$0, %al
+	mov		$0x3f2, %dx
+	mov		$0, %al
 	outsb
-	pop	%dx
+	pop		%dx
 	ret
 
 sectors:
