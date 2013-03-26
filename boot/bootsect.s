@@ -93,7 +93,7 @@ ok_load_setup:
 	int	$0x13
 	mov	$0x00, %ch          # 把 cylinder 設為0(應該是用不到的關係)
 	#seg cs
-	mov	%cx, %cs:sectors+0  # %cs means sectors is in %cs , 
+	mov	%cx, %cs:sectors+0  # %cs means sectors is in %cs , 值為0x12
 	mov	$INITSEG, %ax       # INITSEG的值為0x9000，因為讀取磁盤的參數會改掉ES，所以重設
 	mov	%ax, %es
 
@@ -171,11 +171,11 @@ rp_read:
 	ret
 ok1_read:
 	#seg cs
-	mov	%cs:sectors+0, %ax   # 讀取之前的 secPerTrack/cylinder
-	sub	sread, %ax           # sread = sread - ax 
-	mov	%ax, %cx
-	shl	$9, %cx
-	add	%bx, %cx
+	mov		%cs:sectors+0, %ax   # 讀取之前的 secPerTrack/cylinder
+	sub		sread, %ax           # ax = ax - sread , 也就是 0x12 - 5 = 0x0d, 還剩 0x0d 個 sec 要讀
+	mov		%ax, %cx
+	shl		$9, %cx              # 往左移9個bit , 也就是 cx * 512, 代表這次讀多少 BYTE，這次為0x1900個byte
+	add		%bx, %cx			 # bx 應該是, 經過這次操作後，讀了多少個byte
 	jnc 	ok2_read
 	je 		ok2_read
 	xor 	%ax, %ax
@@ -183,8 +183,8 @@ ok1_read:
 	shr 	$9, %ax
 ok2_read:
 	call 	read_track
-	mov 	%ax, %cx
-	add 	sread, %ax
+	mov 	%ax, %cx         # ax 應該跟進入 read_track 之前是一樣的
+	add 	sread, %ax       # 設定 seek read 指標到最新, 所以是 0x05 +0x0d => %ax = 0x12
 	#seg cs
 	cmp 	%cs:sectors+0, %ax
 	jne 	ok3_read
@@ -216,11 +216,12 @@ read_track:
 	inc	%cx
 	mov	%dl, %ch
 	mov	head, %dx
-	mov	%dl, %dh
-	mov	$0, %dl
-	and	$0x0100, %dx
-	mov	$2, %ah
-	int	$0x13
+	mov	%dl, %dh       # DH = head number
+	mov	$0, %dl        # DL = drive number (bit 7 set for hard disk)
+	and	$0x0100, %dx   # 做 and 運算, 結果應該是 dx=0
+	mov	$2, %ah        # int 13, AH=2 :READ SECTOR(S) INTO MEMORY, AL = number of sectors to read (must be nonzero)
+	int	$0x13          # 第一次進來的時候，AX是keep住還剩多少sec, 也就是 0x0d, 讀到 ES:BX, ES之前設過是0x1000
+	 
 	jc	bad_rt
 	pop	%dx
 	pop	%cx
