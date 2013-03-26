@@ -86,14 +86,15 @@ load_setup:
 ok_load_setup:
 
 # Get disk drive parameters, specifically nr of sectors/track
-
+# 把CX的內容(也就是cy與 sec per track)存在cs:sectors+0 中，sector 為一位置，在最下面有定義
+# 要知道目前硬碟的 sector 位在哪，才知道還剩多少沒有讀取
 	mov	$0x00, %dl          # DL= drive No, int 13, AH=8 = get param
 	mov	$0x0800, %ax		# AH=8 is get drive parameters
 	int	$0x13
 	mov	$0x00, %ch
 	#seg cs
-	mov	%cx, %cs:sectors+0  # %cs means sectors is in %cs , # 把CX的內容(也就是cy與 sec per track)存在cs:sectors+0 中，sector 為一位置，在最下面有定義
-	mov	$INITSEG, %ax       # INITSEG的值為0x9000
+	mov	%cx, %cs:sectors+0  # %cs means sectors is in %cs , 
+	mov	$INITSEG, %ax       # INITSEG的值為0x9000，因為讀取磁盤的參數會改掉ES，所以重設
 	mov	%ax, %es
 
 # Print some inane message
@@ -103,9 +104,9 @@ ok_load_setup:
 	int	$0x10           # AH=03H/INT 10H ，DH = Row, DL = Column
 	
 	mov	$24, %cx
-	mov	$0x0007, %bx		# page 0, attribute 7 (normal)
+	mov	$0x0007, %bx	# page 0, attribute 7 (normal)
 	#lea	msg1, %bp
-	mov     $msg1, %bp      # ES:BP = Offset of string, 顯示load system..
+	mov $msg1, %bp      # ES:BP = Offset of string, 顯示load system..
 	mov	$0x1301, %ax		# write string, move cursor  # AH=13:在Teletype模式下顯示字符串, AL＝像素值
 	int	$0x10
 
@@ -156,7 +157,7 @@ sread:	.word 1+ SETUPLEN	# sectors read of current track
 head:	.word 0			# current head
 track:	.word 0			# current track
 
-//要把 system從磁碟讀到0x10000的位置
+#要把 system從磁碟讀到0x10000的位置
 read_it:
 	mov		%es, %ax        # es已經被設定為 0x1000
 	test	$0x0fff, %ax    # 測試 es 是否為 0x1000
@@ -176,7 +177,7 @@ ok1_read:
 	shl	$9, %cx
 	add	%bx, %cx
 	jnc 	ok2_read
-	je 	ok2_read
+	je 		ok2_read
 	xor 	%ax, %ax
 	sub 	%bx, %ax
 	shr 	$9, %ax
