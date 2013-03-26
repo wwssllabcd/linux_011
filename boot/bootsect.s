@@ -91,7 +91,7 @@ ok_load_setup:
 	mov	$0x00, %dl          # DL= drive No, int 13, AH=8 = get param
 	mov	$0x0800, %ax		# AH=8 is get drive parameters
 	int	$0x13
-	mov	$0x00, %ch
+	mov	$0x00, %ch          # 把 cylinder 設為0(應該是用不到的關係)
 	#seg cs
 	mov	%cx, %cs:sectors+0  # %cs means sectors is in %cs , 
 	mov	$INITSEG, %ax       # INITSEG的值為0x9000，因為讀取磁盤的參數會改掉ES，所以重設
