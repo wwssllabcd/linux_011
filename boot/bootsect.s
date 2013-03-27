@@ -162,44 +162,44 @@ read_it:
 	mov		%es, %ax        # es已經被設定為 0x1000
 	test	$0x0fff, %ax    # 測試 es 是否為 0x1000
 die:	
-	jne 	die				# es must be at 64kB boundary(也就是es = 0x1000)
-	xor 	%bx, %bx		# bx is starting address within segment
+	jne 	die				# es must be at 64kB boundary(也就是es = 0x1000), 所以不對就進入死循環
+	xor 	%bx, %bx		# bx is starting address within segment 
 rp_read:
-	mov 	%es, %ax
+	mov 	%es, %ax        # 檢查目前 ES 是否已經到達 0x3000 
  	cmp 	$ENDSEG, %ax	# have we loaded all yet? # sys_start = 0x1000, sts_end = 0x3000 ，所以大小為100個sector?
-	jb		ok1_read
+	jb		ok1_read        # 如果已經到底了，就 return
 	ret
 ok1_read:
 	#seg cs
-	mov		%cs:sectors+0, %ax   # 讀取之前的 secPerTrack/cylinder
+	mov		%cs:sectors+0, %ax   # 讀取之前的 secPerTrack/cylinder, 這邊是0x12
 	sub		sread, %ax           # ax = ax - sread , 也就是 0x12 - 5 = 0x0d, 還剩 0x0d 個 sec 要讀
 	mov		%ax, %cx
 	shl		$9, %cx              # 往左移9個bit , 也就是 cx * 512, 代表這次讀多少 BYTE，這次為0x1900個byte
-	add		%bx, %cx			 # bx 應該是, 經過這次操作後，讀了多少個byte
-	jnc 	ok2_read
+	add		%bx, %cx			 # cx 應該是, 經過這次操作後，讀了多少個byte, cx = cx+bx
+	jnc 	ok2_read             # cf =0, 則jump
 	je 		ok2_read
 	xor 	%ax, %ax
 	sub 	%bx, %ax
 	shr 	$9, %ax
 ok2_read:
 	call 	read_track
-	mov 	%ax, %cx         # ax 應該跟進入 read_track 之前是一樣的
-	add 	sread, %ax       # 設定 seek read 指標到最新, 所以是 0x05 +0x0d => %ax = 0x12
+	mov 	%ax, %cx         # ax = 這次操作所讀的sector數, 即 0x0d
+	add 	sread, %ax       # ax = 已經讀多少sector 0x05 +0x0d => %ax = 0x12
 	#seg cs
-	cmp 	%cs:sectors+0, %ax
+	cmp 	%cs:sectors+0, %ax   # 比較"secPerTrack"與"目前讀取多少sector" ，如果一樣，就往下執行
 	jne 	ok3_read
 	mov 	$1, %ax
-	sub 	head, %ax
-	jne 	ok4_read
+	sub 	head, %ax        # 看看head是否為1, ax - head = ax
+	jne 	ok4_read         # 如果head目前是0,則會跳到 ok4_read 去執行
 	incw    track 
 ok4_read:
-	mov	%ax, head
-	xor	%ax, %ax
+	mov	%ax, head      # head設為1
+	xor	%ax, %ax       # ax 設0 
 ok3_read:
-	mov	%ax, sread
+	mov	%ax, sread     # ax 若是讀為整個track的話，則為0, 否則為 %cs:sectors，即secPerTrack
 	shl	$9, %cx
-	add	%cx, %bx
-	jnc	rp_read
+	add	%cx, %bx       # cx 應該是, 經過這次操作後，讀了多少個byte
+	jnc	rp_read        # 如果無進位符號，則跳躍 if cf==0, then jump rp_read
 	mov	%es, %ax
 	add	$0x1000, %ax
 	mov	%ax, %es
@@ -209,22 +209,22 @@ ok3_read:
 read_track:
 	push	%ax
 	push	%bx
-	push	%cx
+	push	%cx       
 	push	%dx
 	mov	track, %dx
 	mov	sread, %cx
-	inc	%cx
+	inc	%cx            # CH = low eight bits of cylinder number, CL = sector number 1-63 (bits 0-5)
 	mov	%dl, %ch
-	mov	head, %dx
+	mov	head, %dx      # 取出 head
 	mov	%dl, %dh       # DH = head number
 	mov	$0, %dl        # DL = drive number (bit 7 set for hard disk)
-	and	$0x0100, %dx   # 做 and 運算, 結果應該是 dx=0
+	and	$0x0100, %dx   # 做 and 運算, 結果應該是 dx=0, 這意思是，只會讀到header 1?
 	mov	$2, %ah        # int 13, AH=2 :READ SECTOR(S) INTO MEMORY, AL = number of sectors to read (must be nonzero)
 	int	$0x13          # 第一次進來的時候，AX是keep住還剩多少sec, 也就是 0x0d, 讀到 ES:BX, ES之前設過是0x1000
 	 
 	jc	bad_rt
 	pop	%dx
-	pop	%cx
+	pop	%cx            # cx為目前讀了多少byte
 	pop	%bx
 	pop	%ax
 	ret
