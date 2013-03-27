@@ -163,7 +163,7 @@ read_it:
 	test	$0x0fff, %ax    # 測試 es 是否為 0x1000
 die:	
 	jne 	die				# es must be at 64kB boundary(也就是es = 0x1000), 所以不對就進入死循環
-	xor 	%bx, %bx		# bx is starting address within segment 
+	xor 	%bx, %bx		# bx is starting address within segment ,設 bx =0 代表 ES:BX = 0x1000:0
 rp_read:
 	mov 	%es, %ax        # 檢查目前 ES 是否已經到達 0x3000 
  	cmp 	$ENDSEG, %ax	# have we loaded all yet? # sys_start = 0x1000, sts_end = 0x3000 ，所以大小為100個sector?
@@ -174,15 +174,15 @@ ok1_read:
 	mov		%cs:sectors+0, %ax   # 讀取之前的 secPerTrack/cylinder, 這邊是0x12
 	sub		sread, %ax           # ax = ax - sread , 也就是 0x12 - 5 = 0x0d, 還剩 0x0d 個 sec 要讀
 	mov		%ax, %cx
-	shl		$9, %cx              # 往左移9個bit , 也就是 cx * 512, 代表這次讀多少 BYTE，這次為0x1900個byte
-	add		%bx, %cx			 # cx 應該是, 經過這次操作後，讀了多少個byte, cx = cx+bx
-	jnc 	ok2_read             # cf =0, 則jump
+	shl		$9, %cx              # 也就是 cx * 512, 代表這次打算要讀多少sector, 為 0x0d*0x200 = 0x1a00
+	add		%bx, %cx			 # 因為 bx 為int 13 的 ES:BX, 所以 cx = bx+cx 是利用cx來測試這次的讀取動作有沒有 overflow
+	jnc 	ok2_read             # cf =0, 如果沒有 overflow, 就可以執行這次的read, 否則要調整 read 的 sector
 	je 		ok2_read
-	xor 	%ax, %ax
-	sub 	%bx, %ax
-	shr 	$9, %ax
+	xor 	%ax, %ax             # 這裡看起來是處理 BX已經過頭的地方
+	sub 	%bx, %ax             # 現在的bx 就是代表 overflow 多少個byte, 減去0，代表要讀多少byte出來
+	shr 	$9, %ax              # ax 除512, 則代表要讀多少個sector
 ok2_read:
-	call 	read_track
+	call 	read_track       # 要跳進去之前，AL要先設定好，代表本次要讀多少sector
 	mov 	%ax, %cx         # ax = 這次操作所讀的sector數, 即 0x0d
 	add 	sread, %ax       # ax = 已經讀多少sector 0x05 +0x0d => %ax = 0x12
 	#seg cs
@@ -191,16 +191,16 @@ ok2_read:
 	mov 	$1, %ax
 	sub 	head, %ax        # 看看head是否為1, ax - head = ax
 	jne 	ok4_read         # 如果head目前是0,則會跳到 ok4_read 去執行
-	incw    track 
+	incw    track            # 如果head為1 ，則 track + 1
 ok4_read:
 	mov	%ax, head      # head設為1
 	xor	%ax, %ax       # ax 設0 
 ok3_read:
 	mov	%ax, sread     # ax 若是讀為整個track的話，則為0, 否則為 %cs:sectors，即secPerTrack
-	shl	$9, %cx
-	add	%cx, %bx       # cx 應該是, 經過這次操作後，讀了多少個byte
+	shl	$9, %cx		   # cx 為這次讀多少sector, 為 0x0d*512
+	add	%cx, %bx       # 把目前讀到哪的offset , 重新設給 bx, 因為int 13 read 是靠 ES:BX
 	jnc	rp_read        # 如果無進位符號，則跳躍 if cf==0, then jump rp_read
-	mov	%es, %ax
+	mov	%es, %ax       # 這邊看起來是控制 ES 是否 需要 + 0x1000的地方
 	add	$0x1000, %ax
 	mov	%ax, %es
 	xor	%bx, %bx
@@ -213,7 +213,7 @@ read_track:
 	push	%dx
 	mov	track, %dx
 	mov	sread, %cx
-	inc	%cx            # CH = low eight bits of cylinder number, CL = sector number 1-63 (bits 0-5)
+	inc	%cx            # CL = sector number 1-63 (bits 0-5), 這邊固定 +1, 因為sec是從1開始
 	mov	%dl, %ch
 	mov	head, %dx      # 取出 head
 	mov	%dl, %dh       # DH = head number
@@ -224,7 +224,7 @@ read_track:
 	 
 	jc	bad_rt
 	pop	%dx
-	pop	%cx            # cx為目前讀了多少byte
+	pop	%cx            # cx 為，這次的op, 到底讀出多少byte 
 	pop	%bx
 	pop	%ax
 	ret
