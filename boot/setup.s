@@ -70,7 +70,7 @@ _start:
 	
 	mov	$0x0000, %ax
 	mov	%ax, %ds
-	lds	%ds:4*0x41, %si  
+	lds	%ds:4*0x41, %si   # LDS = load DS, 把這個 string( ds:4*41) 的位置，設給 ds:si ,0x104處存儲的，是硬盤參數表的地址，不是硬盤參數表的內容
 	mov	$INITSEG, %ax
 	mov	%ax, %es
 	mov	$0x0080, %di   # 目的地ES:DI = 0x90080
