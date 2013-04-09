@@ -21,7 +21,7 @@ startup_32:
 	mov %ax,%es
 	mov %ax,%fs
 	mov %ax,%gs
-	lss stack_start,%esp
+	lss stack_start,%esp    # load ss, 把這個位置，讀到 SS:ESP中
 	call setup_idt          # 初始IDT, 即把每個interrup都填成ignore_int(即unknow interrup)的位置
 	call setup_gdt
 	movl $0x10,%eax		# reload all the segment registers
@@ -78,7 +78,7 @@ check_x87:
  *  written by the page tables.
  */
 setup_idt:
-	lea ignore_int,%edx
+	lea ignore_int,%edx    // 把 ignore_int 存在的位置中的值，放到dex中
 	movl $0x00080000,%eax
 	movw %dx,%ax		/* selector = 0x0008 = cs */
 	movw $0x8E00,%dx	/* interrupt gate - dpl=0, present */

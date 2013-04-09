@@ -239,7 +239,7 @@ idt_48:
 gdt_48:
 	.word	0x800			# gdt limit=2048, 256 GDT entries
 	.word   512+gdt, 0x9	# gdt base = 0X9xxxx,   # 加 512的原因是否為 0x90200 的 0x200，也就是 setup.s的位置
-							# 逗號代表連續賦值
+							# 逗號代表連續賦值, 如果 gdt位在0ffset 0x111的位置的話，GDTR = 0009,0311,0000,0008
 	# 512+gdt is the real gdt after setup is moved to 0x9020 * 0x10
 	
 .text
