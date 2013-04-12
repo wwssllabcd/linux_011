@@ -22,18 +22,18 @@ startup_32:
 	mov %ax,%fs
 	mov %ax,%gs
 	lss stack_start,%esp    # load ss, 把這個位置，讀到 SS:ESP中
-	call setup_idt          # 初始IDT, 即把每個interrup都填成ignore_int(即unknow interrup)的位置
-	call setup_gdt
-	movl $0x10,%eax		# reload all the segment registers
-	mov %ax,%ds		# after changing gdt. CS was already
-	mov %ax,%es		# reloaded in 'setup_gdt'
+	call setup_idt          # 初始IDT, 即把每個 interrup 都填成 ignore_int(即unknow interrup，啞中斷)的位置
+	call setup_gdt          # 單純 load gdt desc
+	movl $0x10,%eax		    # reload all the segment registers
+	mov %ax,%ds		        # after changing gdt. CS was already
+	mov %ax,%es		        # reloaded in 'setup_gdt'
 	mov %ax,%fs
 	mov %ax,%gs
 	lss stack_start,%esp
-	xorl %eax,%eax
-1:	incl %eax		# check that A20 really IS enabled
-	movl %eax,0x000000	# loop forever if it isn't
-	cmpl %eax,0x100000
+	xorl %eax,%eax          # eax=0
+1:	incl %eax		        # check that A20 really IS enabled
+	movl %eax,0x000000	    # loop forever if it isn't
+	cmpl %eax,0x100000      # 檢查 0x000000 與 0x100000 的值相, 如果相同，就跳到標號1, 代表沒開A20
 	je 1b
 
 /*
@@ -78,16 +78,16 @@ check_x87:
  *  written by the page tables.
  */
 setup_idt:
-	lea ignore_int,%edx    // 把 ignore_int 存在的位置中的值，放到dex中
-	movl $0x00080000,%eax
-	movw %dx,%ax		/* selector = 0x0008 = cs */
-	movw $0x8E00,%dx	/* interrupt gate - dpl=0, present */
+	lea ignore_int,%edx    // 把 ignore_int 這個 function offset 的值，放到 edx 中
+	movl $0x00080000,%eax  // 這邊的 edx 是存放 idt的高4 byte, 而 eax 存放的是低4 byte, selector = 0x0008 = cs
+	movw %dx,%ax		   /* 把 eax 組合成 segment selector(前2 byte) + function offset(後2 byte)   */
+	movw $0x8E00,%dx	   /* edx的低 2 byte 是設定權限，固定為 0x8E00, interrupt gate - dpl=0, present */
 
-	lea idt,%edi
+	lea idt,%edi           // edi 為 idt所在的offset, 而 idt 在本檔案的最後面，為256個item, 所以大小為 256*8 = 2048
 	mov $256,%ecx          /* 設置repeat 256次, 因為idt最多256個 */
 rp_sidt:
-	movl %eax,(%edi)       /* edi為 idt的位置所在 */
-	movl %edx,4(%edi)
+	movl %eax,(%edi)       /* edi為 idt的位置所在，組合低4 byte  */
+	movl %edx,4(%edi)      // 設定高4 byte 
 	addl $8,%edi           /* 移動edi+=8 */
 	dec %ecx               /* ecx為次數 */
 	jne rp_sidt
@@ -138,8 +138,8 @@ after_page_tables:
 	pushl $0		# These are the parameters to main :-)
 	pushl $0
 	pushl $0
-	pushl $L6		# return address for main, if it decides to.
-	pushl $main     	# 預計返回的時候跳到main ?
+	pushl $L6		# return address for main, if it decides to.(如果不小心從main return時，會jump到L6)
+	pushl $main     # 預計返回的時候跳到main ?
 	jmp setup_paging
 L6:
 	jmp L6			# main should never return here, but
@@ -198,10 +198,10 @@ ignore_int:
  */
 .align 2
 setup_paging:
-	movl $1024*5,%ecx		/* 5 pages - pg_dir+4 page tables */
+	movl $1024*5,%ecx		/* 5 pages - pg_dir+4 page tables , 這邊的cx應該是當作count */ 
 	xorl %eax,%eax
 	xorl %edi,%edi			/* pg_dir is at 0x000 */
-	cld;rep;stosl
+	cld;rep;stosl           // 把eax的值，存到 ES:edi上，且一次加4
 	movl $pg0+7,pg_dir		/* set present bit/user r/w */
 	movl $pg1+7,pg_dir+4		/*  --------- " " --------- */
 	movl $pg2+7,pg_dir+8		/*  --------- " " --------- */
@@ -222,19 +222,20 @@ setup_paging:
 
 .align 2
 .word 0
-idt_descr:
-	.word 256*8-1		# idt contains 256 entries
+idt_descr:          # 低的2 byte, 代表table長度, 高的4 byte為 table 所在的offset , 同 gdt descriptor
+	.word 256*8-1	# idt contains 256 entries
 	.long idt
 .align 2
 .word 0
-gdt_descr:
-	.word 256*8-1		# so does gdt (not that that's any
+gdt_descr:          # 低的2 byte, 代表table長度, 高的4 byte為 table 所在的offset , 同 idt descriptor
+	.word 256*8-1	# so does gdt (not that that's any
 	.long gdt		# magic number, but it works for me :^)
 
 	.align 8
 idt:	.fill 256,8,0		# idt is uninitialized
 
-gdt:	.quad 0x0000000000000000	/* NULL descriptor */
+gdt:	
+	.quad 0x0000000000000000	/* NULL descriptor */
 	.quad 0x00c09a0000000fff	/* 16Mb */
 	.quad 0x00c0920000000fff	/* 16Mb */
 	.quad 0x0000000000000000	/* TEMPORARY - don't use */
@@ -248,7 +249,7 @@ LSM的最後16 bit為限制長度，這邊為0x0FFF代表限制4096個單位，�
 第1個段的參數為0x9A，可知為 可執行/可讀的 code段
 第2個段的參數為0x92，可知為 可讀/寫的 data段
 
-而這兩個段的base都是指向0的位置
+而這兩個段的base都是指向0的位置，這裡的資料同setup.S所設定的一樣，不一樣的是，這個table是位在 address 0 的地方(setup的是在0x92000)
 */
 
 
