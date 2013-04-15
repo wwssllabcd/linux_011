@@ -16,7 +16,7 @@
 pg_dir:
 .globl startup_32
 startup_32:
-	movl $0x10,%eax
+	movl $0x10,%eax         # 0x10 代表 0x08 + 0x02, 則是GDT 1 ，並且特權級為2,見 linux 011. P89
 	mov %ax,%ds
 	mov %ax,%es
 	mov %ax,%fs
@@ -48,7 +48,7 @@ startup_32:
 	orl $2,%eax		# set MP
 	movl %eax,%cr0
 	call check_x87
-	jmp after_page_tables
+	jmp after_page_tables  //最後一個指令，且不會再回來
 
 /*
  * We depend on ET to be correct. This checks for 287/387.
@@ -135,15 +135,15 @@ tmp_floppy_area:
 	.fill 1024,1,0
 
 after_page_tables:
-	pushl $0		# These are the parameters to main :-)
+	pushl $0		 # These are the parameters to main :-)
 	pushl $0
 	pushl $0
-	pushl $L6		# return address for main, if it decides to.(如果不小心從main return時，會jump到L6)
-	pushl $main     # 預計返回的時候跳到main ?
+	pushl $L6		 # return address for main, if it decides to.(如果不小心從main return時，會jump到L6)
+	pushl $main      # 預計返回的時候跳到main ?
 	jmp setup_paging
 L6:
-	jmp L6			# main should never return here, but
-				# just in case, we know what happens.
+	jmp L6			 # main should never return here, but
+				     # just in case, we know what happens.
 
 /* This is the default interrupt "handler" :-) */
 int_msg:
@@ -203,22 +203,22 @@ setup_paging:
 	xorl %edi,%edi			/* pg_dir is at 0x000 */
 	cld;rep;stosl           // 把eax的值，存到 ES:edi上，且一次加4
 	movl $pg0+7,pg_dir		/* set present bit/user r/w */
-	movl $pg1+7,pg_dir+4		/*  --------- " " --------- */
-	movl $pg2+7,pg_dir+8		/*  --------- " " --------- */
-	movl $pg3+7,pg_dir+12		/*  --------- " " --------- */
+	movl $pg1+7,pg_dir+4	// pg_dir 位在 addr=0的位置，這邊把$pg0+7(也就是0x1007)，存入addr=0的位置
+	movl $pg2+7,pg_dir+8	// 而這邊的 code 不會被蓋到的原因是因為 這段code 放在 .org 0x5000 的原因
+	movl $pg3+7,pg_dir+12	
 	movl $pg3+4092,%edi
 	movl $0xfff007,%eax		/*  16Mb - 4096 + 7 (r/w user,p) */
-	std
-1:	stosl			/* fill pages backwards - more efficient :-) */
-	subl $0x1000,%eax
+	std                     
+1:	stosl			        /* fill pages backwards - more efficient :-) */
+	subl $0x1000,%eax       // 利用eax 遞減0x1000, 把所有的page table的值填正確, 如fff007,ffe007,fffd007等
 	jge 1b
 	cld
-	xorl %eax,%eax		/* pg_dir is at 0x0000 */
-	movl %eax,%cr3		/* cr3 - page directory start */
+	xorl %eax,%eax		   /* pg_dir is at 0x0000 */
+	movl %eax,%cr3		   /* cr3 - page directory start */
 	movl %cr0,%eax
 	orl $0x80000000,%eax
-	movl %eax,%cr0		/* set paging (PG) bit */
-	ret			/* this also flushes prefetch-queue */
+	movl %eax,%cr0		   /* set paging (PG) bit */
+	ret			           /* this also flushes prefetch-queue */
 
 .align 2
 .word 0
