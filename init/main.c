@@ -76,8 +76,8 @@ extern long startup_time;
  */
 
 #define CMOS_READ(addr) ({ \
-outb_p(0x80|addr,0x70); \
-inb_p(0x71); \
+		outb_p(0x80|addr,0x70); \
+		inb_p(0x71); \
 })
 
 #define BCD_TO_BIN(val) ((val)=((val)&15) + ((val)>>4)*10)
@@ -120,31 +120,35 @@ void main(void)		/* This really IS void, no error here. */
  * enable them
  */
 
- 	ROOT_DEV = ORIG_ROOT_DEV;
- 	drive_info = DRIVE_INFO; // 把0x90080的RAM addr解釋成drive_info(0x90080是存放硬碟參數表)
-	memory_end = (1<<20) + (EXT_MEM_K<<10);
+ 	ROOT_DEV = ORIG_ROOT_DEV; // ORIG_ROOT_DEV=0x901FC
+ 	drive_info = DRIVE_INFO;  // 把0x90080的 RAM addr 解釋成drive_info(0x90080是存放硬碟參數表)
+	memory_end = (1<<20) + (EXT_MEM_K<<10);  // EXT_MEM_K 是在 setup.S中取得
 	memory_end &= 0xfffff000;
 
 	//linux 0.11系統最大16MB
 	if (memory_end > 16*1024*1024)
 		memory_end = 16*1024*1024;
 		//這邊缺buffer_memory_end的初始值??(buffer_memory_end的初值為0)
+
 	if (memory_end > 12*1024*1024) 
-		//buffer_memory_end乃高速緩衝區的結尾，見linux內核完全註釋P-660
+		//如果 mem大於 12MB, 就建立  4MB 的高速緩衝，見linux內核完全註釋P-660
 		buffer_memory_end = 4*1024*1024;
 	else if (memory_end > 6*1024*1024)
+		//如果 mem大於 6MB, 就建立  2MB 的高速緩衝
 		buffer_memory_end = 2*1024*1024;
 	else
-		buffer_memory_end = 1*1024*1024;//小於6MB記憶體的話
+		buffer_memory_end = 1*1024*1024;//小於6MB記憶體的話, 就建立  1MB 的高速緩衝
+
 
 	//根據機器記憶體大小不同, 調整main_memory_start的start addr
 	main_memory_start = buffer_memory_end;
+
 #ifdef RAMDISK
 	main_memory_start += rd_init(main_memory_start, RAMDISK*1024);
 #endif
 
 	// 初始化記憶體的chain, 也就是初始化"mem_map"這個buffer
-	mem_init(main_memory_start,memory_end); // memory_end 看來是total memory的位置
+	mem_init(main_memory_start, memory_end); // memory_end 看來是total memory的位置
 	trap_init();
 	blk_dev_init();
 	chr_dev_init();

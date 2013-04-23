@@ -19,20 +19,21 @@ __asm__ ("movl %%esp,%%eax\n\t" \
 
 #define iret() __asm__ ("iret"::)
 
-/* ©Ò¦³ªº set_xx_gate³£¬O¥H³o­Ó¬°°òÂ¦, ¦Ó³oºØ¼gªk¬OGCCªº´OASMªº¼gªk,¥Ñ¥ª©¹¥k¬Ý
-  _set_gate¥Î©ó³]¸m¤¤Â_¦V¶qªí¡A§Y±Ninterrupt[]©Midt_tableÁpÃ´¦b¤@°_
-  gate_addr¦b¦¹¦ì¸m³]¸mªù´y­z²Å(¬Oidt¹ïÀ³¨ìªº½s¸¹ªºramaddr)
-  type ªù´y­z²ÅÃþ«¬(14,15)
-  dpl¯SÅv¯Å«H®§(§YDPTR¨º­ÓDPL)(0~3)
-  addr¤¤Â_©Î²§±`³B²z¹Lµ{¦a§}
-  ¥ý±N%%dxªº§C16¦ì²¾¤J%%axªº§C16¦ì(ª`·N%%dx»P%%edxªº°Ï§O¡^//¥ý±N%%dxªº§C16¦ì²¾¤J%%axªº§C16¦ì(ª`·N%%dx»P%%edxªº°Ï§O¡^
-  ±µµÛ§â²Ä¤@­Ó¿é¤J¥ß§Y¼Æ(0x8000+(dpl<<13)+(type<<8)¸Ë¤J%%edx(¤]´N¬O%dx)ªº§C16¦ì¡C( type¬°0x100,0x200 ~ 0xE00, 0xF00)
-   µM«á¦A§Q¥Îmove long,§âax»Pdx¤À§O²¾¨ìgateaddr»Pgateaddr+4 */
+/* æ‰€æœ‰çš„ set_xx_gateéƒ½æ˜¯ä»¥é€™å€‹ç‚ºåŸºç¤Ž, è€Œé€™ç¨®å¯«æ³•æ˜¯GCCçš„åµŒASMçš„å¯«æ³•,ç”±å·¦å¾€å³çœ‹
+  _set_gateç”¨æ–¼è¨­ç½®ä¸­æ–·å‘é‡è¡¨ï¼Œå³å°‡interrupt[]å’Œidt_tableè¯ç¹«åœ¨ä¸€èµ·
+  gate_addråœ¨æ­¤ä½ç½®è¨­ç½®é–€æè¿°ç¬¦(æ˜¯idtå°æ‡‰åˆ°çš„ç·¨è™Ÿçš„ramaddr)
+  type é–€æè¿°ç¬¦é¡žåž‹(14,15)
+  dplç‰¹æ¬Šç´šä¿¡æ¯(å³DPTRé‚£å€‹DPL)(0~3)
+  addrä¸­æ–·æˆ–ç•°å¸¸è™•ç†éŽç¨‹åœ°å€
+  å…ˆå°‡%%dxçš„ä½Ž16ä½ç§»å…¥%%axçš„ä½Ž16ä½(æ³¨æ„%%dxèˆ‡%%edxçš„å€åˆ¥ï¼‰
+  æŽ¥è‘—æŠŠç¬¬ä¸€å€‹è¼¸å…¥ç«‹å³æ•¸(0x8000+(dpl<<13)+(type<<8)è£å…¥%%edx(ä¹Ÿå°±æ˜¯%dx)çš„ä½Ž16ä½ã€‚( typeç‚º0x100,0x200 ~ 0xE00, 0xF00)
+   ç„¶å¾Œå†åˆ©ç”¨move long,æŠŠaxèˆ‡dxåˆ†åˆ¥ç§»åˆ°gateaddrèˆ‡gateaddr+4 */
 
-/* "i" ¥ß§Y¼Æ, "o" ¾Þ§@¼Æ¬°¤º¦sÅÜ¶q¡A¦ý¬O¨ä´M§}¤è¦¡¬O°¾²¾¶qÃþ«¬¡A */
-/* ¥H¤Ud¨º¦æ,¦]¬°param 0,1,2¬O¥]§t¦basm code¸Ì­±,©Ò¥H¯u¥¿­n¥ýinputªº¬O d »P a¡A¤]´N¬O§â addr©ñ¨ìedx, §â0x00080000©ñ¨ìeax */
-#define _set_gate(gate_addr,type,dpl,addr) \
-__asm__ ("movw %%dx,%%ax\n\t" \
+/* "i" ç«‹å³æ•¸, "o" æ“ä½œæ•¸ç‚ºå…§å­˜è®Šé‡ï¼Œä½†æ˜¯å…¶å°‹å€æ–¹å¼æ˜¯åç§»é‡é¡žåž‹ï¼Œ */
+/* ä»¥ä¸‹dé‚£è¡Œ,å› ç‚ºparam 0,1,2æ˜¯åŒ…å«åœ¨asm codeè£¡é¢,æ‰€ä»¥çœŸæ­£è¦å…ˆinputçš„æ˜¯ d èˆ‡ aï¼Œä¹Ÿå°±æ˜¯æŠŠ addræ”¾åˆ°edx, æŠŠ0x00080000æ”¾åˆ°eax */
+#define _set_gate(gate_addr, type, dpl, addr) \
+__asm__ (
+	"movw %%dx,%%ax\n\t" \
 	"movw %0,%%dx\n\t" \
 	"movl %%eax,%1\n\t" \
 	"movl %%edx,%2" \
@@ -43,22 +44,22 @@ __asm__ ("movw %%dx,%%ax\n\t" \
 	"d" ((char *) (addr)),"a" (0x00080000))
 
 /*
- * ¦p0¸¹¤¤Â_ªºasm¦p¤U¡A·|¥ý³]input(0x52f~541)¡A¦A¨Ó°õ¦æasm(0x546~54f)
+ * å¦‚0è™Ÿä¸­æ–·çš„asmå¦‚ä¸‹ï¼Œæœƒå…ˆè¨­input(0x52f~541)ï¼Œå†ä¾†åŸ·è¡Œasm(0x546~54f)
 	set_trap_gate(0,&divide_error);
- 52f:	b9 00 00 00 00       	mov    $0x0,%ecx       // ecx¥Î¨Ó¦s©ñgate_addr
+ 52f:	b9 00 00 00 00       	mov    $0x0,%ecx       // ecxç”¨ä¾†å­˜æ”¾gate_addr
  534:	b8 00 00 00 00       	mov    $0x0,%eax
- 539:	8d 58 04             	lea    0x4(%eax),%ebx  // ebx¥Î¨Ó¦s©ñgate_addr+4
- 53c:	ba 00 00 00 00       	mov    $0x0,%edx       // §âaddr ©ñ¨ìedx
- 541:	b8 00 00 08 00       	mov    $0x80000,%eax   // ³o­Ó´N¬O "a"(0x80000)
- //====================== ¥H¤U¬°°õ¦æ ================================
+ 539:	8d 58 04             	lea    0x4(%eax),%ebx  // ebxç”¨ä¾†å­˜æ”¾gate_addr+4
+ 53c:	ba 00 00 00 00       	mov    $0x0,%edx       // æŠŠaddr æ”¾åˆ°edx
+ 541:	b8 00 00 08 00       	mov    $0x80000,%eax   // é€™å€‹å°±æ˜¯ "a"(0x80000)
+ //====================== ä»¥ä¸‹ç‚ºåŸ·è¡Œ ================================
  546:	66 89 d0             	mov    %dx,%ax
- 549:	66 ba 00 8f          	mov    $0x8F00,%dx  // ¦pªG¬Oset_trap_gate¡A¥Ñ©ótype=15(0x0f), dpl=0¡A©Ò¥Hºâ¥X¨Ó¬O0x8f00
- 54d:	89 01                	mov    %eax,(%ecx)  // §âeaxªº­È¡A²¾¨ìgate_addr(§Yidt table)ªº°O¾ÐÅé¦ì¸m
+ 549:	66 ba 00 8f          	mov    $0x8F00,%dx  // å¦‚æžœæ˜¯set_trap_gateï¼Œç”±æ–¼type=15(0x0f), dpl=0ï¼Œæ‰€ä»¥ç®—å‡ºä¾†æ˜¯0x8f00
+ 54d:	89 01                	mov    %eax,(%ecx)  // æŠŠeaxçš„å€¼ï¼Œç§»åˆ°gate_addr(å³idt table)çš„è¨˜æ†¶é«”ä½ç½®
  54f:	89 13                	mov    %edx,(%ebx)
 */
 
 #define set_intr_gate(n,addr) \
-	_set_gate(&idt[n],14,0,addr) /* ®Ú¾Ú½s¸¹,§âidt¹ïÀ³¨ìªº½s¸¹ªºram addr¶Çµ¹set_gate */
+	_set_gate(&idt[n],14,0,addr) /* æ ¹æ“šç·¨è™Ÿ,æŠŠidtå°æ‡‰åˆ°çš„ç·¨è™Ÿçš„ram addrå‚³çµ¦set_gate */
 
 #define set_trap_gate(n,addr) \
 	_set_gate(&idt[n],15,0,addr)

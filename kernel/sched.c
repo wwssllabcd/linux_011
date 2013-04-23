@@ -389,11 +389,17 @@ void sched_init(void)
 
 	if (sizeof(struct sigaction) != 16)
 		panic("Struct sigaction MUST be 16 bytes");
+
+	// FIRST_TSS_ENTRY = 4 , 可能是 0(null, 1(code), 2(data), 3 reserve) 被使用
+	// FIRST_LDT_ENTRY = FIRST_TSS_ENTRY+1 = 5
 	set_tss_desc(gdt+FIRST_TSS_ENTRY,&(init_task.task.tss));
 	set_ldt_desc(gdt+FIRST_LDT_ENTRY,&(init_task.task.ldt));
-	p = gdt+2+FIRST_TSS_ENTRY;
+
+	p = gdt+2+FIRST_TSS_ENTRY; // 從第6項開始
 	for(i=1;i<NR_TASKS;i++) {
 		task[i] = NULL;
+
+		//一個task會用到兩個 descritpor ex:code & data ?
 		p->a=p->b=0;
 		p++;
 		p->a=p->b=0;
@@ -408,6 +414,6 @@ void sched_init(void)
 	outb(LATCH >> 8 , 0x40);	/* MSB */
 	set_intr_gate(0x20,&timer_interrupt);
 	outb(inb_p(0x21)&~0x01,0x21);
-	//�]�wsystem_call��0x80�����_
+	//�]�wsystem_call��0x80�����_
 	set_system_gate(0x80,&system_call);
 }

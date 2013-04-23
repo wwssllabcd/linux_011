@@ -157,9 +157,9 @@ void ll_rw_block(int rw, struct buffer_head * bh)
 void blk_dev_init(void)
 {
 	int i;
-	//NR_REQUEST³Ì¦h¬°32­Ó
+	//NR_REQUESTæœ€å¤šç‚º32å€‹
 	for (i=0 ; i<NR_REQUEST ; i++) {
 		request[i].dev = -1;
-		request[i].next = NULL;  // next¬°¤@request¡A¤]´N¬O»¡¡A³o¾ã­Ó¬°¤@­Ólink list
+		request[i].next = NULL;  // nextç‚ºä¸€requestï¼Œä¹Ÿå°±æ˜¯èªªï¼Œé€™æ•´å€‹ç‚ºä¸€å€‹link list
 	}
 }

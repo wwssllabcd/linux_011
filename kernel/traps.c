@@ -187,6 +187,11 @@ void trap_init(void)
 	//divide_error是一個function, 這邊把該 function的位置設到IDT中
 	//而看來這個function是自己產生出來的，叫do_divide_error
 	
+	// set_trap_gate是由以下而組成
+	// #define set_trap_gate(n,addr) \
+	// _set_gate(&idt[n],15,0,addr)
+
+
 	set_trap_gate(0,&divide_error);
 	set_trap_gate(1,&debug);
 	set_trap_gate(2,&nmi);
