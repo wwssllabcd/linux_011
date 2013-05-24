@@ -150,7 +150,7 @@ void main(void)		/* This really IS void, no error here. */
 	// 初始化記憶體的chain, 也就是初始化"mem_map"這個buffer
 	mem_init(main_memory_start, memory_end); // memory_end 看來是total memory的位置
 	trap_init();
-	blk_dev_init();
+	blk_dev_init();  //初始化 request[]
 	chr_dev_init();
 	tty_init();
 	time_init();

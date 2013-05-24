@@ -192,6 +192,7 @@ void trap_init(void)
 	// _set_gate(&idt[n],15,0,addr)
 
 
+	// set get 在其他OS書上面，不見得一定要用asm來設定
 	set_trap_gate(0,&divide_error); //除0時，發生錯誤
 	set_trap_gate(1,&debug);
 	set_trap_gate(2,&nmi);
@@ -210,7 +211,7 @@ void trap_init(void)
 	set_trap_gate(15,&reserved);
 	set_trap_gate(16,&coprocessor_error);
 	
-	// 其實這塊是 BIOS 與 DOS中斷使用，BISO使用0x10~0x1F, DOS使用0x20~0x2F
+	// 其實這塊是 BIOS 與 DOS 中斷使用，BISO 使用0x10~0x1F, DOS使用0x20~0x2F
 	// 由此可知linux 捨棄bios中斷不用
 	for (i=17;i<48;i++)
 		set_trap_gate(i,&reserved);

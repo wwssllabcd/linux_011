@@ -159,8 +159,9 @@ end_move:
 # which is used for the internal hardware interrupts as well. We just
 # have to reprogram the 8259's, and it isn't fun.
 
-	# 設定 兩顆 PIC, 第一顆PIC的位置在  0x20(ICW1), 0x21(ICW2~4), 第二顆在0xA0位置
-	# 這邊有個規則就是， 0x21 若循序寫入的話，會寫到ICW2, ICW3, ICW4, OCW1
+	# 設定 兩顆 PIC, 雖然每個 PIC 只使用兩個 I/O Port,
+	# 第一顆PIC的4個register位置在  0x20(ICW1), 0x21(ICW2~4), 第二顆在0xA0 ~ 0xA1位置
+	# 這邊有個規則就是， 0x21 若循序寫入的話，會寫到ICW2, ICW3, ICW4, OCW1 (注意，只有兩個記憶體位置)
 	
 	mov	$0x11, %al		# initialization sequence(ICW1)
 						# ICW4 needed(1),CASCADE mode,Level-triggered
@@ -170,19 +171,19 @@ end_move:
 	# Bit3: 0: 邊緣觸發, 1: 準位觸發 
 	# Bit4: 0: alway fix 1
 	
-	out	%al, $0x20		# send it to 8259A-1 
-	.word	0x00eb,0x00eb		# jmp $+2, jmp $+2
+	out	%al, $0x20		     # send it to 8259A-1
+	.word	0x00eb,0x00eb	 # jmp $+2, jmp $+2
 	
 	# 設定第二顆(也就是 slave PIC, 其第二顆的ICW1 位置在0xA0)
-	out	%al, $0xA0		# and to 8259A-2
+	out	%al, $0xA0		     # and to 8259A-2
 	.word	0x00eb,0x00eb
 	
-	#把 0x20這個值，設給PIC0-ICW2，代表PIC的中斷，是由編號 0x20起跳
+	#把 0x20這個值，設給PIC0-ICW2，代表PIC-0的中斷，是由編號 0x20起跳
 	mov	$0x20, %al		# start of hardware int's (0x20)(ICW2)
 	out	%al, $0x21		# from 0x20-0x27
 	.word	0x00eb,0x00eb
 	
-	#把 0x20這個值，設給PIC1-ICW2，代表PIC的中斷，是由編號 0x20起跳
+	#把 0x28這個值，設給PIC1-ICW2，代表PIC-1的中斷，是由編號 0x28起跳
 	mov	$0x28, %al		# start of hardware int's 2 (0x28)
 	out	%al, $0xA1		# from 0x28-0x2F
 	.word	0x00eb,0x00eb		#               IR 7654 3210
@@ -213,6 +214,7 @@ end_move:
 	//寫入OCW1，這邊代表關掉 8 個 interrupt
 	mov	$0xFF, %al		# mask off all interrupts for now
 	out	%al, $0x21
+
 	.word	0x00eb,0x00eb
 	out	%al, $0xA1
 

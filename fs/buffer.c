@@ -381,6 +381,7 @@ void buffer_init(long buffer_end)
 		if (b == (void *) 0x100000)
 			b = (void *) 0xA0000;
 	}
+
 	h--;
 	free_list = start_buffer;
 	free_list->b_prev_free = h;

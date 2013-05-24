@@ -340,9 +340,10 @@ void do_hd_request(void)
 		panic("unknown hd-command");
 }
 
+
 void hd_init(void)
 {
-	//blk_dev看來像是各種io的index，3號為HD的index(2號為Floppy)
+	// blk_dev看來像是各種io的index，3號為HD的index(2號為Floppy)
 	// MAJOR_NR定義在自己的頭文件上
 	blk_dev[MAJOR_NR].request_fn = DEVICE_REQUEST;
 	
@@ -350,6 +351,14 @@ void hd_init(void)
 	set_intr_gate(0x2E,&hd_interrupt);
 	
 	// 復位接聯的主8259A int2 的屏蔽位，允許從片發出中斷請求信號。
+
+	//看來直接讀入 addr 0x21( PIC-0, OCW1)的值，並且跟0xFB作 and動作之後，在寫回去0x21
 	outb_p(inb_p(0x21)&0xfb,0x21);
-	outb(inb_p(0xA1)&0xbf,0xA1);
+
+	//讀入0xA1( PIC-1, OCW1)
+	outb(  inb_p(0xA1)&0xbf,0xA1);
+
+	//outb_p() 在執行了CPU的outb指令後會再使用jmp指令延遲了幾個機器週期時間.
+	//而outb()則是只執行outb指令
+
 }

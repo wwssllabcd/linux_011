@@ -456,7 +456,12 @@ void do_fd_request(void)
 
 void floppy_init(void)
 {
+	//由 blk_dev的定義來看，FD的編號就是2
 	blk_dev[MAJOR_NR].request_fn = DEVICE_REQUEST;
+
+	//設定IRQ
 	set_trap_gate(0x26,&floppy_interrupt);
+
+	// 0x26為bit6，所以去 and (~0x40)
 	outb(inb_p(0x21)&~0x40,0x21);
 }

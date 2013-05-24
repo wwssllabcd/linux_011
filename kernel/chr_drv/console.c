@@ -620,10 +620,10 @@ void con_init(void)
 	char *display_desc = "????";
 	char *display_ptr;
 
-	video_num_columns = ORIG_VIDEO_COLS;
+	video_num_columns = ORIG_VIDEO_COLS; //取出0x90007, window width
 	video_size_row = video_num_columns * 2;
 	video_num_lines = ORIG_VIDEO_LINES;
-	video_page = ORIG_VIDEO_PAGE;
+	video_page = ORIG_VIDEO_PAGE;  // display page
 	video_erase_char = 0x0720;
 	
 	if (ORIG_VIDEO_MODE == 7)			/* Is this a monochrome display? */
@@ -681,6 +681,7 @@ void con_init(void)
 
 	gotoxy(ORIG_X,ORIG_Y);
 	set_trap_gate(0x21,&keyboard_interrupt);
+	//有點像是再設定PIC
 	outb_p(inb_p(0x21)&0xfd,0x21);
 	a=inb_p(0x61);
 	outb_p(a|0x80,0x61);

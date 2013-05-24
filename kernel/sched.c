@@ -395,25 +395,29 @@ void sched_init(void)
 	set_tss_desc(gdt+FIRST_TSS_ENTRY,&(init_task.task.tss));
 	set_ldt_desc(gdt+FIRST_LDT_ENTRY,&(init_task.task.ldt));
 
+
 	p = gdt+2+FIRST_TSS_ENTRY; // 從第6項開始
 	for(i=1;i<NR_TASKS;i++) {
 		task[i] = NULL;
 
-		//一個task會用到兩個 descritpor ex:code & data ?
+		// 不知是否使用兩個ULONG 來代表8 BYTE
 		p->a=p->b=0;
 		p++;
 		p->a=p->b=0;
 		p++;
 	}
+
 /* Clear NT, so that we won't have troubles with that later on */
 	__asm__("pushfl ; andl $0xffffbfff,(%esp) ; popfl");
-	ltr(0);
-	lldt(0);
+	ltr(0);  //LTR: Load Task Register
+	lldt(0); //lldt: Load Local Descriptor Table Register
+
 	outb_p(0x36,0x43);		/* binary, mode 3, LSB/MSB, ch 0 */
 	outb_p(LATCH & 0xff , 0x40);	/* LSB */
 	outb(LATCH >> 8 , 0x40);	/* MSB */
 	set_intr_gate(0x20,&timer_interrupt);
 	outb(inb_p(0x21)&~0x01,0x21);
-	//�]�wsystem_call��0x80�����_
+
+	//設定系統呼叫
 	set_system_gate(0x80,&system_call);
 }
