@@ -184,7 +184,7 @@ void trap_init(void)
 	//而80x86 CPU本身就會引發0~19號中斷，而20~31號由intel自己保留，供日後開發使用
 	//可見linux核心詳解P-146
 
-	//divide_error是一個function, 這邊把該 function的位置設到IDT中
+	//divide_error 是一個 function, 這邊把該 divide_error function 的位置設到IDT中
 	//而看來這個function是自己產生出來的，叫do_divide_error
 	
 	// set_trap_gate是由以下而組成
@@ -192,7 +192,7 @@ void trap_init(void)
 	// _set_gate(&idt[n],15,0,addr)
 
 
-	set_trap_gate(0,&divide_error);
+	set_trap_gate(0,&divide_error); //除0時，發生錯誤
 	set_trap_gate(1,&debug);
 	set_trap_gate(2,&nmi);
 	set_system_gate(3,&int3);	/* int3-5 can be called from all */

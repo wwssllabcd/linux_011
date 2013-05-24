@@ -120,16 +120,16 @@ void main(void)		/* This really IS void, no error here. */
  * enable them
  */
 
- 	ROOT_DEV = ORIG_ROOT_DEV; // ORIG_ROOT_DEV=0x901FC
+ 	ROOT_DEV = ORIG_ROOT_DEV; // ORIG_ROOT_DEV=0x901FC( 當初用 bios int 取得)
  	drive_info = DRIVE_INFO;  // 把0x90080的 RAM addr 解釋成drive_info(0x90080是存放硬碟參數表)
 	memory_end = (1<<20) + (EXT_MEM_K<<10);  // EXT_MEM_K 是在 setup.S中取得
-	memory_end &= 0xfffff000;
+	memory_end &= 0xfffff000; //切齊 4k?
 
 	//linux 0.11系統最大16MB
 	if (memory_end > 16*1024*1024)
 		memory_end = 16*1024*1024;
-		//這邊缺buffer_memory_end的初始值??(buffer_memory_end的初值為0)
 
+	//根據目前記憶體大小，設定buffer的大小(buffer_memory_end的初值為0)
 	if (memory_end > 12*1024*1024) 
 		//如果 mem大於 12MB, 就建立  4MB 的高速緩衝，見linux內核完全註釋P-660
 		buffer_memory_end = 4*1024*1024;

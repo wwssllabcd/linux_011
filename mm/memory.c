@@ -404,22 +404,26 @@ void do_no_page(unsigned long error_code,unsigned long address)
 }
 
 //把可使用的 memory，在 mem_map 中設成0
+// 記憶體配置應為右圖 ( |----1M(kernel)---|---buffer(1,2,4M)---|-start--主記憶體區--end-|，Total最多16MB )
 void mem_init(long start_mem, long end_mem)
 {
+	// start_mem 傳入的是主記憶體區的start, end_mem就是主記憶體區的end
 	int i;
 
 	HIGH_MEMORY = end_mem;
 
 	//把15MB以前的都設為used( 1M以前的是kernel + video BIOS + etc 加起來共16MB)
+
 	//而linux 0.11最多支援16MB內存, 而PAGING_PAGES是以4k(向右shift 12)為管理單位
-	//這邊用一個mem_map去對應整個15MB的記憶體位置(以4k為單位)
+	//這邊用一個 BYTE mem_map[PAGING_PAGES] 去對應整個15MB(應該是16MB - 1MB(kernel))的記憶體位置(以4k為單位)
 	//這個for 迴圈是把mem_map整個初始化成used
 	for (i=0 ; i<PAGING_PAGES ; i++)
-		mem_map[i] = USED; // mem_map是從1M之後，最大15M
+		mem_map[i] = USED; // mem_map是從1M ~ 16MB 的位置，設成100(0x64)，花了3840 byte(約4k來管理)
+
 
 	// 算出  memory_Start 位在第i項
-	// start_mem減去1M(0x100000)，在除以4k，算出有幾個page，因為mem_map不包含內核1M的管理
-	// i 為 mem_start的點，記憶體配置應為右圖 ( |----1M---|--buffer--|-start----------end-|，Total最多16MB )
+	// 因為mem_map不包含內核1M的管理，但start_mem有包含，所以 start_mem 減去1M(0x100000)，再除以4k，start_mem是位在第i項
+	// i 為 mem_start的點，
 	i = MAP_NR(start_mem);
 	end_mem -= start_mem;
 
