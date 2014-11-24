@@ -62,7 +62,7 @@ __asm__ (
 	"a" (0x00080000))
 
 /*
- * 如0號中斷的asm如下，會先設input(0x52f~541)，再來執行asm(0x546~54f)
+ * 如0號中斷的 asm 如下，會先設input(0x52f~541)，再來執行asm(0x546~54f)
 	set_trap_gate(0,&divide_error);
  52f:	b9 00 00 00 00       	mov    $0x0,%ecx       // ecx 被 GCC 作asm 參數輸入的預先處理，拿來存放gate_addr
  534:	b8 00 00 00 00       	mov    $0x0,%eax
@@ -76,11 +76,12 @@ __asm__ (
  54f:	89 13                	mov    %edx,(%ebx)  // bx為desc的高4 byte( hi 2 byte: function addr hi offset + lo 2 byte: flag)
 */
 
+// IDT分成3種( int, trap, task)，見 linux內核註釋P114
 #define set_intr_gate(n,addr) \
-	_set_gate(&idt[n],14,0,addr) /* 根據編號,把idt對應到的編號的ram addr傳給set_gate */
+	_set_gate(&idt[n],14,0,addr) /* 根據編號,把 idt 對應到的編號的ram addr傳給set_gate */
 
 #define set_trap_gate(n,addr) \
-	_set_gate(&idt[n],15,0,addr) // trap gate的類型為 15(CPU定義)
+	_set_gate(&idt[n],15,0,addr) // trap gate的類型為 15(CPU定義), IDT 為一個8 BYTE * 256 的陣列組合，對應到 CPU的IDT
 
 #define set_system_gate(n,addr) \
 	_set_gate(&idt[n],15,3,addr)

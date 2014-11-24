@@ -136,8 +136,14 @@
 #define __NR_setregid	71
 
 /* 
-以下的__asm__表asm code從這邊開始，以下的asm可以看成  __asm__ volatile ("int $0x80" : "=a" (__res) : "0" (__NR_fork));
- : "=a" (__res) ，代表asm結束之後，把 eax 的值(a=eax, b=ebx..以此類推)，設給__res這個變數
+以下的__asm__表asm code從這邊開始，以下的asm可以看成
+ __asm__ volatile (
+ 	 "int $0x80"
+ 	 : "=a" (__res)
+ 	 : "0" (__NR_fork)
+ );
+
+ 其中 : "=a" (__res) ，代表 asm 結束之後，把 eax 的值(a=eax, b=ebx..以此類推)，設給__res這個變數
  _syscall0利用了define產生一個 0參數的function 
 */
 

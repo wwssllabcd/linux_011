@@ -181,18 +181,18 @@ void do_reserved(long esp, long error_code)
 void trap_init(void)
 {
 	int i;
-	//而80x86 CPU本身就會引發0~19號中斷，而20~31號由intel自己保留，供日後開發使用
-	//可見linux核心詳解P-146
+	// 而 80x86 CPU本身就會引發0~19號中斷，而20~31號由 Intel 自己保留，供日後開發使用
+	// 可見linux核心詳解P-146
 
-	//divide_error 是一個 function, 這邊把該 divide_error function 的位置設到IDT中
-	//而看來這個function是自己產生出來的，叫do_divide_error
+	// divide_error 是一個 function, 這邊把該 divide_error function 的位置設到IDT中
+	// 而看來這個 function 是自己產生出來的，叫do_divide_error
 	
 	// set_trap_gate是由以下而組成
 	// #define set_trap_gate(n,addr) \
 	// _set_gate(&idt[n],15,0,addr)
 
 
-	// set get 在其他OS書上面，不見得一定要用asm來設定
+	// set get 在其他OS書上面，不見得一定要用 asm 來設定
 	set_trap_gate(0,&divide_error); //除0時，發生錯誤
 	set_trap_gate(1,&debug);
 	set_trap_gate(2,&nmi);
@@ -217,7 +217,11 @@ void trap_init(void)
 		set_trap_gate(i,&reserved);
 		
 	set_trap_gate(45,&irq13);
+
+
 	outb_p(inb_p(0x21)&0xfb,0x21);
+
 	outb(inb_p(0xA1)&0xdf,0xA1);
+
 	set_trap_gate(39,&parallel_interrupt);
 }

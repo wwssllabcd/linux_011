@@ -78,7 +78,7 @@ reschedule:
 	jmp schedule
 .align 2
 system_call:
-	cmpl $nr_system_calls-1,%eax  # 是比大小吧看看eax的值是否小於72
+	cmpl $nr_system_calls-1,%eax  # 是比大小吧看看eax的值是否小於72(nr_system_calls為一變數)
 	ja bad_sys_call               # 如果沒找到的話, jump到bad_sys_call
 				      # 保留原 "段" register
 	push %ds

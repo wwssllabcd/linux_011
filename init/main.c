@@ -25,11 +25,14 @@ static inline pause(void) __attribute__((always_inline));
 
 // _syscall0為一define, 傳入type與name
 // 也就是說，利用define的方式，做一個類似template，把fork,pause,setup,sync這四個function建立起來
-// 舉fork來說，_syscall0建立了一個 int fork()的function
-static inline _syscall0(int,fork)
+// 舉fork來說，_syscall0建立了一個 int fork()的function，他傳入的參數為0, 所以也有syscall1(),syscall2(),等
+static inline _syscall0(int, fork)
 // Linux 的系統調用中斷0x80。該中斷是所有系統調用的
 // 入口。該條語句實際上是int fork()創建進程系統調用。
 // syscall0 名稱中最後的0 表示無參數，1 表示1 個參數。
+
+//利用 define 來建立一個 int fork()的system call
+
 static inline _syscall0(int,pause)
 static inline _syscall1(int,setup,void *,BIOS)
 static inline _syscall0(int,sync)
@@ -125,16 +128,17 @@ void main(void)		/* This really IS void, no error here. */
 	memory_end = (1<<20) + (EXT_MEM_K<<10);  // EXT_MEM_K 是在 setup.S中取得
 	memory_end &= 0xfffff000; //切齊 4k?
 
-	//linux 0.11系統最大16MB
+	//linux 0.11系統最大 16MB，這邊看來只是讓他不要出過16MB
 	if (memory_end > 16*1024*1024)
 		memory_end = 16*1024*1024;
 
-	//根據目前記憶體大小，設定buffer的大小(buffer_memory_end的初值為0)
+	// 根據目前記憶體大小，設定buffer的大小(buffer_memory_end的初值為0)
+	// 由以下的 code看來，不管怎樣都會建立起一個 Buffer，只是說這個buffer大小為何而已
 	if (memory_end > 12*1024*1024) 
-		//如果 mem大於 12MB, 就建立  4MB 的高速緩衝，見linux內核完全註釋P-660
+		//如果 mem 大於 12MB, 就建立  4MB 的 buffer(高速緩衝)，見 linux 內核完全註釋P-660
 		buffer_memory_end = 4*1024*1024;
 	else if (memory_end > 6*1024*1024)
-		//如果 mem大於 6MB, 就建立  2MB 的高速緩衝
+		//如果 mem 大於 6MB, 就建立  2MB 的 buffer 高速緩衝
 		buffer_memory_end = 2*1024*1024;
 	else
 		buffer_memory_end = 1*1024*1024;//小於6MB記憶體的話, 就建立  1MB 的高速緩衝
@@ -147,11 +151,16 @@ void main(void)		/* This really IS void, no error here. */
 	main_memory_start += rd_init(main_memory_start, RAMDISK*1024);
 #endif
 
-	// 初始化記憶體的chain, 也就是初始化"mem_map"這個buffer
+	// 初始化記憶體的chain, 也就是初始化"mem_map"這個 array，buffer區設100(不可用), main區設0(可使用)
+	// 看來buffer_end 接著之後就是 main_memory_start
 	mem_init(main_memory_start, memory_end); // memory_end 看來是total memory的位置
+
+	// 設定中斷與 IDT table
 	trap_init();
+
 	blk_dev_init();  //初始化 request[]
-	chr_dev_init();
+	chr_dev_init(); // 空的
+
 	tty_init();
 	time_init();
 	sched_init();
@@ -166,6 +175,7 @@ void main(void)		/* This really IS void, no error here. */
 	move_to_user_mode();
 
 	//fork其實是用 _syscall0產生出來的(_syscall0代表沒有參數)
+	//int 0x80
 	if (!fork()) {		/* we count on this going ok */
 		init();
 	}

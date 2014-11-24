@@ -37,12 +37,15 @@ static void init(int port)
 
 void rs_init(void)
 {
-	//中斷第0x24號, type為14, rs1_interrupt是一個function
+	// 設定中斷第0x24號, type為14, rs1_interrupt 是一個 function，當int 24h發生時，該function會被呼叫
 	set_intr_gate(0x24,rs1_interrupt);
+
 	set_intr_gate(0x23,rs2_interrupt);
 
+	// 此function在正上方
 	init(tty_table[1].read_q.data);
 	init(tty_table[2].read_q.data);
+
 	outb(inb_p(0x21)&0xE7,0x21);
 }
 

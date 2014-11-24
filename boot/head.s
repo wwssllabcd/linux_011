@@ -48,7 +48,7 @@ startup_32:
 	orl $2,%eax		# set MP
 	movl %eax,%cr0
 	call check_x87
-	jmp after_page_tables  //最後一個指令，且不會再回來
+	jmp after_page_tables  #//最後一個指令，且不會再回來
 
 /*
  * We depend on ET to be correct. This checks for 287/387.
