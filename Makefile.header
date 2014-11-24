@@ -5,9 +5,10 @@
 
 AS	= as --32
 LD	= ld
-LDFLAGS = -m elf_i386 -x 
-CC	= gcc -fno-stack-protector
-CFLAGS  = -g -m32 -fno-builtin -fomit-frame-pointer -fstrength-reduce #-Wall
+#LDFLAGS = -m elf_i386 -x 
+LDFLAGS = -m elf_i386
+CC	= gcc
+CFLAGS  = -g -m32 -fno-builtin -fno-stack-protector -fomit-frame-pointer -fstrength-reduce #-Wall
 
 CPP	= cpp -nostdinc
 AR	= ar

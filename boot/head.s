@@ -78,20 +78,20 @@ check_x87:
  *  written by the page tables.
  */
 setup_idt:
-	lea ignore_int,%edx    // 把 ignore_int 這個 function offset 的值，放到 edx 中
-	movl $0x00080000,%eax  // 這邊的 edx 是存放 idt的高4 byte, 而 eax 存放的是低4 byte, selector = 0x0008 = cs
-	movw %dx,%ax		   /* 把 eax 組合成 segment selector(前2 byte) + function offset(後2 byte)   */
-	movw $0x8E00,%dx	   /* edx的低 2 byte 是設定權限，固定為 0x8E00, interrupt gate - dpl=0, present */
+	lea ignore_int,%edx    #// 把 ignore_int 這個 function offset 的值，放到 edx 中
+	movl $0x00080000,%eax  #// 這邊的 edx 是存放 idt的高4 byte, 而 eax 存放的是低4 byte, selector = 0x0008 = cs
+	movw %dx,%ax		   #/* 把 eax 組合成 segment selector(前2 byte) + function offset(後2 byte)   */
+	movw $0x8E00,%dx	   #/* edx的低 2 byte 是設定權限，固定為 0x8E00, interrupt gate - dpl=0, present */
 
-	lea idt,%edi           // edi 為 idt所在的offset, 而 idt 在本檔案的最後面，為256個item, 所以大小為 256*8 = 2048
-	mov $256,%ecx          /* 設置repeat 256次, 因為idt最多256個 */
+	lea idt,%edi           #// edi 為 idt所在的offset, 而 idt 在本檔案的最後面，為256個item, 所以大小為 256*8 = 2048
+	mov $256,%ecx          #/* 設置repeat 256次, 因為idt最多256個 */
 rp_sidt:
-	movl %eax,(%edi)       /* edi為 idt的位置所在，組合低4 byte  */
-	movl %edx,4(%edi)      // 設定高4 byte 
-	addl $8,%edi           /* 移動edi+=8 */
-	dec %ecx               /* ecx為次數 */
+	movl %eax,(%edi)       #/* edi為 idt的位置所在，組合低4 byte  */
+	movl %edx,4(%edi)      #// 設定高4 byte
+	addl $8,%edi           #/* 移動edi+=8 */
+	dec %ecx               #/* ecx為次數 */
 	jne rp_sidt
-	lidt idt_descr         /* load idt table的位置到iDPTR */
+	lidt idt_descr         #/* load idt table的位置到iDPTR */
 	ret
 
 /*
@@ -198,27 +198,27 @@ ignore_int:
  */
 .align 2
 setup_paging:
-	movl $1024*5,%ecx		/* 5 pages - pg_dir+4 page tables , 這邊的cx應該是當作count */ 
+	movl $1024*5,%ecx		#/* 5 pages - pg_dir+4 page tables , 這邊的cx應該是當作count */
 	xorl %eax,%eax
-	xorl %edi,%edi			/* pg_dir is at 0x000 */
-	cld;rep;stosl           // 把eax的值，存到 ES:edi上，且一次加4
-	movl $pg0+7,pg_dir		/* set present bit/user r/w */
-	movl $pg1+7,pg_dir+4	// pg_dir 位在 addr=0的位置，這邊把$pg0+7(也就是0x1007)，存入addr=0的位置
-	movl $pg2+7,pg_dir+8	// 而這邊的 code 不會被蓋到的原因是因為 這段code 放在 .org 0x5000 的原因
+	xorl %edi,%edi			#/* pg_dir is at 0x000 */
+	cld;rep;stosl           #// 把eax的值，存到 ES:edi上，且一次加4
+	movl $pg0+7,pg_dir		#/* set present bit/user r/w */
+	movl $pg1+7,pg_dir+4	#// pg_dir 位在 addr=0的位置，這邊把$pg0+7(也就是0x1007)，存入addr=0的位置
+	movl $pg2+7,pg_dir+8	#// 而這邊的 code 不會被蓋到的原因是因為 這段code 放在 .org 0x5000 的原因
 	movl $pg3+7,pg_dir+12	
 	movl $pg3+4092,%edi
-	movl $0xfff007,%eax		/*  16Mb - 4096 + 7 (r/w user,p) */
+	movl $0xfff007,%eax		#/*  16Mb - 4096 + 7 (r/w user,p) */
 	std                     
-1:	stosl			        /* fill pages backwards - more efficient :-) */
-	subl $0x1000,%eax       // 利用eax 遞減0x1000, 把所有的page table的值填正確, 如fff007,ffe007,fffd007等
+1:	stosl			        #/* fill pages backwards - more efficient :-) */
+	subl $0x1000,%eax       #// 利用eax 遞減0x1000, 把所有的page table的值填正確, 如fff007,ffe007,fffd007等
 	jge 1b
 	cld
-	xorl %eax,%eax		   /* pg_dir is at 0x0000 */
-	movl %eax,%cr3		   /* cr3 - page directory start */
+	xorl %eax,%eax		   #/* pg_dir is at 0x0000 */
+	movl %eax,%cr3		   #/* cr3 - page directory start */
 	movl %cr0,%eax
 	orl $0x80000000,%eax
-	movl %eax,%cr0		   /* set paging (PG) bit */
-	ret			           /* this also flushes prefetch-queue */
+	movl %eax,%cr0		   #/* set paging (PG) bit */
+	ret			           #/* this also flushes prefetch-queue */
 
 .align 2
 .word 0

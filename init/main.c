@@ -27,6 +27,7 @@ static inline pause(void) __attribute__((always_inline));
 // 也就是說，利用define的方式，做一個類似template，把fork,pause,setup,sync這四個function建立起來
 // 舉fork來說，_syscall0建立了一個 int fork()的function，他傳入的參數為0, 所以也有syscall1(),syscall2(),等
 static inline _syscall0(int, fork)
+
 // Linux 的系統調用中斷0x80。該中斷是所有系統調用的
 // 入口。該條語句實際上是int fork()創建進程系統調用。
 // syscall0 名稱中最後的0 表示無參數，1 表示1 個參數。
