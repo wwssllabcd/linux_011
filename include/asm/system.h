@@ -19,7 +19,8 @@ __asm__ ("movl %%esp,%%eax\n\t" \
 
 #define iret() __asm__ ("iret"::)
 
-/* 所有的 set_xx_gate都是以這個為基礎, 而這種寫法是GCC的嵌ASM的寫法,由左往右看
+/*
+    所有的 set_xx_gate都是以這個為基礎, 而這種寫法是GCC的嵌ASM的寫法,由左往右看
   _set_gate用於設置中斷向量表，即將interrupt[]和idt_table聯繫在一起
 
  gate_addr在此位置設置門描述符(是idt對應到的編號的ramaddr)
@@ -40,17 +41,18 @@ __asm__ ("movl %%esp,%%eax\n\t" \
  Bit 15    : protect, P=1 代表節區存在
 
 
-   然後再利用move long,把ax與dx分別移到gateaddr與gateaddr+4 */
+   然後再利用move long,把ax與dx分別移到gateaddr與gateaddr+4
 
-// "i" 立即數(修飾參數使用)
-// "o" 操作數為內存變量(修飾參數使用)，但是其尋址方式是偏移量類型
+  "i" 立即數(修飾參數使用)
+  "o" 操作數為內存變量(修飾參數使用)，但是其尋址方式是偏移量類型
 
-// "d" 將輸入變量放入edx ，也就是把 addr放到edx
-// "a" 將輸入變量放入edx 把0x00080000放到 eax
+  "d" 將輸入變量放入edx ，也就是把 addr放到edx
+  "a" 將輸入變量放入edx 把0x00080000放到 eax
 
-#define _set_gate(gate_addr, type, dpl, addr) \
-__asm__ (
-	"movw %%dx,%%ax\n\t" \
+*/
+
+#define _set_gate(gate_addr,type,dpl,addr) \
+__asm__ ("movw %%dx,%%ax\n\t" \
 	"movw %0,%%dx\n\t" \
 	"movl %%eax,%1\n\t" \
 	"movl %%edx,%2" \
@@ -58,8 +60,8 @@ __asm__ (
 	: "i" ((short) (0x8000+(dpl<<13)+(type<<8))), \
 	"o" (*((char *) (gate_addr))), \
 	"o" (*(4+(char *) (gate_addr))), \
-	"d" ((char *) (addr)),\
-	"a" (0x00080000))
+	"d" ((char *) (addr)),"a" (0x00080000)\
+	)
 
 /*
  * 如0號中斷的 asm 如下，會先設input(0x52f~541)，再來執行asm(0x546~54f)
