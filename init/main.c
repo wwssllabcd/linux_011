@@ -129,9 +129,11 @@ void main(void)		/* This really IS void, no error here. */
 	memory_end = (1<<20) + (EXT_MEM_K<<10);  // EXT_MEM_K 是在 setup.S中取得
 	memory_end &= 0xfffff000; //切齊 4k?
 
+	// |----1M(kernel)---|---buffer(1,2,4M)---|-main_memory_start--主記憶體區--main_memory_end-|
 	//linux 0.11系統最大 16MB，這邊看來只是讓他不要出過16MB
 	if (memory_end > 16*1024*1024)
 		memory_end = 16*1024*1024;
+
 
 	// 根據目前記憶體大小，設定buffer的大小(buffer_memory_end的初值為0)
 	// 由以下的 code看來，不管怎樣都會建立起一個 Buffer，只是說這個buffer大小為何而已

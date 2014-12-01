@@ -30,6 +30,7 @@ extern int end;
 extern void put_super(int);
 extern void invalidate_inodes(int);
 
+// end 為 kernel code 的，末端，LD 在編譯的時候決定
 struct buffer_head * start_buffer = (struct buffer_head *) &end;
 struct buffer_head * hash_table[NR_HASH];
 static struct buffer_head * free_list;
@@ -350,18 +351,18 @@ struct buffer_head * breada(int dev,int first, ...)
 
 void buffer_init(long buffer_end)
 {
-	//start_buffer為end的後一個
+	// kernel 的end 緊接著就是 start_buffer
 	struct buffer_head * h = start_buffer;
 	void * b;
 	int i;
 
-	//如果剛好為1M，則跳到640k處
+	//如果剛好為1M(0x100000)，則跳到640k處
 	if (buffer_end == 1<<20)
 		b = (void *) (640*1024);
 	else
-		b = (void *) buffer_end;
+		b = (void *) buffer_end; // 沒意外的話，B應該是Main_mem_start
 
-	//h由前往後，b由後往前，當交會時，則代表配置完成
+	// h 由前往後，b由後往前，當交會時，則代表配置完成
 	while ( (b -= BLOCK_SIZE) >= ((void *) (h+1)) ) {
 		h->b_dev = 0;
 		h->b_dirt = 0;
@@ -369,15 +370,22 @@ void buffer_init(long buffer_end)
 		h->b_lock = 0;
 		h->b_uptodate = 0;
 		h->b_wait = NULL;
+
+		//好像是 hash table 使用
 		h->b_next = NULL;
 		h->b_prev = NULL;
+
+		//b_data代表所要管理的 buffer
 		h->b_data = (char *) b;
+
+		//雙向link list
 		h->b_prev_free = h-1;
 		h->b_next_free = h+1;
 		h++;
-		NR_BUFFERS++;
 
-		//因為buffer從640k ~ 1M的地方是BIOS ROM與 顯存的地方，所以不能使用
+		NR_BUFFERS++;//統計Buffer有多少個，感覺 buffer 管理跟 main_ memory 是分開的
+
+		//因為 buffer 從640k ~ 1M的地方是BIOS ROM與 顯存的地方，所以不能使用
 		if (b == (void *) 0x100000)
 			b = (void *) 0xA0000;
 	}
