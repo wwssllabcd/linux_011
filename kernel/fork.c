@@ -76,17 +76,21 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 	int i;
 	struct file *f;
 
-	p = (struct task_struct *) get_free_page();
+	p = (struct task_struct *) get_free_page(); // 找位置給新的process
+
 	if (!p)
 		return -EAGAIN;
 	task[nr] = p;
 	
+	// 整個 struct 複製？
 	// NOTE!: the following statement now work with gcc 4.3.2 now, and you
 	// must compile _THIS_ memcpy without no -O of gcc.#ifndef GCC4_3
 	*p = *current;	/* NOTE! this doesn't copy the supervisor stack */
+
+
 	p->state = TASK_UNINTERRUPTIBLE;
 	p->pid = last_pid;
-	p->father = current->pid;
+	p->father = current->pid; // 把當錢的 process 設成父進程
 	p->counter = p->priority;
 	p->signal = 0;
 	p->alarm = 0;
@@ -95,11 +99,14 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 	p->cutime = p->cstime = 0;
 	p->start_time = jiffies;
 	p->tss.back_link = 0;
+
+	// 系統給了 P 一個page的大小，P又代表該空間的啟始位置，這個舉動代表esp0為該空間的尾端
+	// 類似startAddr + struct size
 	p->tss.esp0 = PAGE_SIZE + (long) p;
 	p->tss.ss0 = 0x10;
 	p->tss.eip = eip;
 	p->tss.eflags = eflags;
-	p->tss.eax = 0;
+	p->tss.eax = 0;     // ax 是 int 80  的return 的值，也就是下 fork後，基本上會取到 0 的意思?
 	p->tss.ecx = ecx;
 	p->tss.edx = edx;
 	p->tss.ebx = ebx;
@@ -113,26 +120,35 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 	p->tss.ds = ds & 0xffff;
 	p->tss.fs = fs & 0xffff;
 	p->tss.gs = gs & 0xffff;
+
 	p->tss.ldt = _LDT(nr);
 	p->tss.trace_bitmap = 0x80000000;
+
 	if (last_task_used_math == current)
 		__asm__("clts ; fnsave %0"::"m" (p->tss.i387));
 	if (copy_mem(nr,p)) {
+		//如果copy出錯，則roll back
 		task[nr] = NULL;
 		free_page((long) p);
 		return -EAGAIN;
 	}
 	for (i=0; i<NR_OPEN;i++)
 		if ((f=p->filp[i]))
-			f->f_count++;
+			f->f_count++; // ref-cnt 增加1
+
 	if (current->pwd)
 		current->pwd->i_count++;
 	if (current->root)
 		current->root->i_count++;
 	if (current->executable)
 		current->executable->i_count++;
+
+	// FIRST_TSS_ENTRY = 4，看來TSS段還是加入到 GDT中
 	set_tss_desc(gdt+(nr<<1)+FIRST_TSS_ENTRY,&(p->tss));
+
+	// LDT放在TSS之後
 	set_ldt_desc(gdt+(nr<<1)+FIRST_LDT_ENTRY,&(p->ldt));
+
 	p->state = TASK_RUNNING;	/* do this last, just in case */
 	return last_pid;
 }
@@ -142,10 +158,13 @@ int find_empty_process(void)
 	int i;
 
 	repeat:
-		if ((++last_pid)<0) last_pid=1;
-		for(i=0 ; i<NR_TASKS ; i++)
-			if (task[i] && task[i]->pid == last_pid) goto repeat;
-	for(i=1 ; i<NR_TASKS ; i++)
+	if ((++last_pid) < 0)
+		last_pid = 1;
+	for (i = 0; i < NR_TASKS; i++)
+		if (task[i] && task[i]->pid == last_pid)
+			goto repeat;
+
+	for (i = 1; i < NR_TASKS; i++)
 		if (!task[i])
 			return i;
 	return -EAGAIN;

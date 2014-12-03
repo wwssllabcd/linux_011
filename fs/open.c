@@ -141,24 +141,41 @@ int sys_open(const char * filename,int flag,int mode)
 	struct file * f;
 	int i,fd;
 
+	// 把文件模式與"目前process使用的模式"做mask
 	mode &= 0777 & ~current->umask;
+
+	//找到空的位置
 	for(fd=0 ; fd<NR_OPEN ; fd++)
 		if (!current->filp[fd])
 			break;
+
+	//如果沒有位置，就return EINVAL
 	if (fd>=NR_OPEN)
 		return -EINVAL;
+
+	//把該文件設成0，代表開啟？
 	current->close_on_exec &= ~(1<<fd);
+
+	//意思跟 &file_table[0]是一樣的
 	f=0+file_table;
+
+	//找到一個f_count=0 的位置
 	for (i=0 ; i<NR_FILE ; i++,f++)
 		if (!f->f_count) break;
+
 	if (i>=NR_FILE)
 		return -EINVAL;
+
+	// 因為上面F++的關係，目前F停在目標上，所以 f_count++
 	(current->filp[fd]=f)->f_count++;
+
+
 	if ((i=open_namei(filename,flag,mode,&inode))<0) {
 		current->filp[fd]=NULL;
 		f->f_count=0;
 		return i;
 	}
+
 /* ttys are somewhat special (ttyxx major==4, tty major==5) */
 	if (S_ISCHR(inode->i_mode)) {
 		if (MAJOR(inode->i_zone[0])==4) {

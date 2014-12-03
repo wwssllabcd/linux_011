@@ -8,10 +8,10 @@
 #include <unistd.h>
 #include <stdarg.h>
 
-//// 打開文件函數(也許也是一個裝置，如tty)
-// 打開並有可能創建一個文件。
+// 打開文件函數(也許也是一個裝置，如tty)， 打開並有可能創建一個文件。
 // 參數：filename - 文件名；flag - 文件打開標誌；...
 // 返回：文件描述符，若出錯則置出錯碼，並返回-1。
+// 詳細說明見 P161
 int open(const char * filename, int flag, ...)
 {
 	register int res;
@@ -22,17 +22,17 @@ int open(const char * filename, int flag, ...)
 	// %0 - eax(返回的描述符或出錯碼)；%1 - eax(系統中斷調用功能號__NR_open)；
 	// %2 - ebx(文件名filename)；%3 - ecx(打開文件標誌flag)；%4 - edx(後隨參數文件屬性mode)。
 	va_start(arg,flag);
-	__asm__("int $0x80"
-		// 輸出部分， "=a"需要把"="與"a"分開來看，等號為輸出操作值，也就是把eax指給 res
-		:"=a" (res)
-		
-		//輸入部分，把__NR_open(常數5)指給eax, 把filename指給ebx, 把flag指給ecx,把va_arg(arg,int)指給edx
-		//也就是說system_call的輸入參數 分別存放在ebx，ecx，edx寄存器 中。
-		//所以從這邊也可以推斷，int 80, type5類型用到的參數
-		//簡單的講,就是執行int 0x80, 然後再中斷那邊, 根據eax來做中斷種類的dispatch
-		
-		:"0" (__NR_open),"b" (filename),"c" (flag),
-		"d" (va_arg(arg,int)));
+	__asm__(
+			"int $0x80"
+			// 輸出部分， "=a"需要把"="與"a"分開來看，等號為輸出操作值，也就是把eax指給 res
+			:"=a" (res)
+
+			//輸入部分，把__NR_open(常數5)指給eax, 把filename指給ebx, 把flag指給ecx,把va_arg(arg,int)指給edx
+			//也就是說system_call的輸入參數 分別存放在ebx，ecx，edx寄存器 中。
+			//所以從這邊也可以推斷，int 80, type5類型用到的參數
+			//簡單的講,就是執行int 0x80, 然後在中斷那邊, 根據eax來做中斷種類的dispatch
+			:"0" (__NR_open),"b" (filename),"c" (flag), "d" (va_arg(arg,int))
+	);
 	
 	// 系統中斷調用返回值大於或等於0，表示是一個文件描述符，則直接返回之。
 	if (res>=0)

@@ -102,6 +102,8 @@ struct task_struct {
 	struct m_inode * root;
 	struct m_inode * executable;
 	unsigned long close_on_exec;
+
+	// filp 貌似是一種ref-count, 儲存開了多少個 file/dev
 	struct file * filp[NR_OPEN];
 /* ldt for this task 0 - zero 1 - cs 2 - ds&ss */
 	struct desc_struct ldt[3];// LDT中，有3個Descriptor

@@ -104,18 +104,21 @@ static struct buffer_head * find_entry(struct m_inode ** dir,
 	if (namelen > NAME_LEN)
 		namelen = NAME_LEN;
 #endif
+
 	entries = (*dir)->i_size / (sizeof (struct dir_entry));
 	*res_dir = NULL;
+
 	if (!namelen)
 		return NULL;
-/* check for '..', as we might have to do some "magic" for it */
+
+	/* check for '..', as we might have to do some "magic" for it */
 	if (namelen==2 && get_fs_byte(name)=='.' && get_fs_byte(name+1)=='.') {
-/* '..' in a pseudo-root results in a faked '.' (just change namelen) */
+		/* '..' in a pseudo-root results in a faked '.' (just change namelen) */
 		if ((*dir) == current->root)
 			namelen=1;
 		else if ((*dir)->i_num == ROOT_INO) {
-/* '..' over a mount-point results in 'dir' being exchanged for the mounted
-   directory-inode. NOTE! We set mounted, so that we can iput the new dir */
+			/* '..' over a mount-point results in 'dir' being exchanged for the mounted
+   	   	   	   directory-inode. NOTE! We set mounted, so that we can iput the new dir */
 			sb=get_super((*dir)->i_dev);
 			if (sb->s_imount) {
 				iput(*dir);
@@ -124,12 +127,17 @@ static struct buffer_head * find_entry(struct m_inode ** dir,
 			}
 		}
 	}
+
 	if (!(block = (*dir)->i_zone[0]))
 		return NULL;
+
 	if (!(bh = bread((*dir)->i_dev,block)))
 		return NULL;
+
 	i = 0;
+
 	de = (struct dir_entry *) bh->b_data;
+
 	while (i < entries) {
 		if ((char *)de >= BLOCK_SIZE+bh->b_data) {
 			brelse(bh);
@@ -148,7 +156,9 @@ static struct buffer_head * find_entry(struct m_inode ** dir,
 		de++;
 		i++;
 	}
+
 	brelse(bh);
+
 	return NULL;
 }
 
@@ -334,9 +344,11 @@ struct m_inode * namei(const char * pathname)
  *
  * namei for open - this is in fact almost the whole open-routine.
  */
+// 名稱為 name_inode 的簡寫？
 int open_namei(const char * pathname, int flag, int mode,
 	struct m_inode ** res_inode)
 {
+
 	const char * basename;
 	int inr,dev,namelen;
 	struct m_inode * dir, *inode;
@@ -345,10 +357,15 @@ int open_namei(const char * pathname, int flag, int mode,
 
 	if ((flag & O_TRUNC) && !(flag & O_ACCMODE))
 		flag |= O_WRONLY;
+
 	mode &= 0777 & ~current->umask;
 	mode |= I_REGULAR;
+
+	//從pathname解析出 namelen 與 basename
 	if (!(dir = dir_namei(pathname,&namelen,&basename)))
 		return -ENOENT;
+
+	//如果文件長度為0(如/usr/)，表示打開的為目錄
 	if (!namelen) {			/* special case: '/usr/' etc */
 		if (!(flag & (O_ACCMODE|O_CREAT|O_TRUNC))) {
 			*res_inode=dir;
@@ -357,7 +374,9 @@ int open_namei(const char * pathname, int flag, int mode,
 		iput(dir);
 		return -EISDIR;
 	}
+
 	bh = find_entry(&dir,basename,namelen,&de);
+
 	if (!bh) {
 		if (!(flag & O_CREAT)) {
 			iput(dir);

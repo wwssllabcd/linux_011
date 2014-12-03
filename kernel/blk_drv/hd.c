@@ -94,6 +94,7 @@ int sys_setup(void * BIOS)
 	else
 		NR_HD=1;
 #endif
+
 	for (i=0 ; i<NR_HD ; i++) {
 		hd[i*5].start_sect = 0;
 		hd[i*5].nr_sects = hd_info[i].head*

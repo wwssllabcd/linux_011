@@ -48,7 +48,7 @@ void show_stat(void)
 extern void mem_use(void);
 
 extern int timer_interrupt(void);
-extern int system_call(void);
+extern int system_call(void); // 在kernel/system_call.s 中
 
 union task_union {
 	struct task_struct task;
@@ -426,6 +426,6 @@ void sched_init(void)
 	set_intr_gate(0x20,&timer_interrupt);
 	outb(inb_p(0x21)&~0x01,0x21);
 
-	//設定系統呼叫
+	//設定系統呼叫，最後會呼叫到 sys.h的那個function ptr array
 	set_system_gate(0x80,&system_call);
 }

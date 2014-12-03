@@ -80,7 +80,8 @@ reschedule:
 system_call:
 	cmpl $nr_system_calls-1,%eax  # 是比大小吧看看eax的值是否小於72(nr_system_calls為一變數)
 	ja bad_sys_call               # 如果沒找到的話, jump到bad_sys_call
-				      # 保留原 "段" register
+
+	# 保留原 "段" register
 	push %ds
 	push %es
 	push %fs
@@ -88,14 +89,20 @@ system_call:
 	pushl %ecx		# push %ebx,%ecx,%edx as parameters
 	pushl %ebx		# to the system call
 
-	# 把edx設成10, 在設給 ds,es
+	# 把 edx 設成10, 在設給 ds,es
 	movl $0x10,%edx		# set up ds,es to kernel space
 	mov %dx,%ds
 	mov %dx,%es
 	movl $0x17,%edx		# fs points to local data space
+
+	# fs 設成 0x17
 	mov %dx,%fs
 
-	call *sys_call_table(,%eax,4)   # 這種寫法是 AT&T中的 sys_call_table[%eax*4]
+	# 這種寫法是 AT&T中的 sys_call_table[%eax*4] ，因為這個table 是4 byte, 所以要乘4
+	# linux 利用int 0x80 做system call, 利用 :"0" (__NR_##name)，做dispatch
+	# 如 __NR_open = 5，就是去 call sys_call_table的第五項
+	# 詳細說明見 P161
+	call *sys_call_table(,%eax,4)
 	pushl %eax
 	movl current,%eax
 	cmpl $0,state(%eax)		# state
@@ -212,7 +219,7 @@ sys_execve:
 
 .align 2
 sys_fork:
-	call find_empty_process
+	call find_empty_process  # 此 function 在 fork.c 中，會回傳empty的索引
 	testl %eax,%eax
 	js 1f
 	push %gs
@@ -220,7 +227,7 @@ sys_fork:
 	pushl %edi
 	pushl %ebp
 	pushl %eax
-	call copy_process
+	call copy_process        # 此 function 在 fork.c 中
 	addl $20,%esp
 1:	ret
 

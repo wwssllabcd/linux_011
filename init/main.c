@@ -23,17 +23,19 @@
 static inline fork(void) __attribute__((always_inline));
 static inline pause(void) __attribute__((always_inline));
 
-// _syscall0為一define, 傳入type與name
-// 也就是說，利用define的方式，做一個類似template，把fork,pause,setup,sync這四個function建立起來
-// 舉fork來說，_syscall0建立了一個 int fork()的function，他傳入的參數為0, 所以也有syscall1(),syscall2(),等
+// _syscall0為一define, 傳入type 與 name
+// 也就是說，利用 define 的方式，做一個類似 template，把 fork, pause, setup, sync這四個 function 建立起來
+// 舉 fork來說，_syscall0建立了一個 int fork()的function，他傳入的參數為0, 所以也有 syscall1(),syscall2(),等
+// 最後會跳到 sys_fork去，這邊要注意的是擴展開來的_syscall0，其中 asm的"0" (__NR_##name))
+// 代表是 把 __NR_fork(在unistd.h中定義為2) 設給 eax, 而 system_call又是根據 eax 來做 system 的dispatch
+// 所以就是去sys_call_table[] 中的第2項，也就是 sys_fork
 static inline _syscall0(int, fork)
 
 // Linux 的系統調用中斷0x80。該中斷是所有系統調用的
 // 入口。該條語句實際上是int fork()創建進程系統調用。
 // syscall0 名稱中最後的0 表示無參數，1 表示1 個參數。
 
-//利用 define 來建立一個 int fork()的system call
-
+// 利用 define 來建立一個 int fork()的system call，最後會跳到 sys_pause去
 static inline _syscall0(int,pause)
 static inline _syscall1(int,setup,void *,BIOS)
 static inline _syscall0(int,sync)
@@ -177,8 +179,8 @@ void main(void)		/* This really IS void, no error here. */
 	//切換到x86 user mode
 	move_to_user_mode();
 
-	//fork其實是用 _syscall0產生出來的(_syscall0代表沒有參數)
-	//int 0x80
+	// fork 其實是用  _syscall0 產生出來的(_syscall0代表沒有參數)
+	// int 0x80 在 sched_init 中設定，跳到 system_call.s中的sys_fork(asm)
 	if (!fork()) {		/* we count on this going ok */
 		init();
 	}
@@ -218,8 +220,12 @@ void init(void)
 {
 	int pid,i;
 
+	// 會跳到 sys_setup ( 在hd.c中)，這段在設定HD
 	setup((void *) &drive_info);
+
+	// open.c 中的 sys_open
 	(void) open("/dev/tty0",O_RDWR,0);
+
 	(void) dup(0);  //複製handle，產生handle1, stdout
 	(void) dup(0);  //複製handle，產生handle2, stderr
 	//這兩段會顯示在tty上面
