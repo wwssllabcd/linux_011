@@ -219,8 +219,8 @@ sys_execve:
 
 .align 2
 sys_fork:
-	call find_empty_process  # 此 function 在 fork.c 中，會回傳empty的索引
-	testl %eax,%eax
+	call find_empty_process  # 此 function 在 fork.c 中，會找出 task[i] 中, 那個位置是空的，並回傳 empty 的索引
+	testl %eax,%eax                  # testl %eax,%eax的結果就是%eax, 於是就針對%eax值的屬性設置狀態碼，例如上面說到的是正是負還是零
 	js 1f
 	push %gs
 	pushl %esi

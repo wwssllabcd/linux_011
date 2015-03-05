@@ -26,9 +26,13 @@ static inline pause(void) __attribute__((always_inline));
 // _syscall0為一define, 傳入type 與 name
 // 也就是說，利用 define 的方式，做一個類似 template，把 fork, pause, setup, sync這四個 function 建立起來
 // 舉 fork來說，_syscall0建立了一個 int fork()的function，他傳入的參數為0, 所以也有 syscall1(),syscall2(),等
-// 最後會跳到 sys_fork去，這邊要注意的是擴展開來的_syscall0，其中 asm的"0" (__NR_##name))
+// 最後會跳到 sys_fork 去
+
+// 這邊要注意的是擴展開來的_syscall0，其中  asm 的"0" (__NR_##name))，而__NR_FORK = 2，故0的參數為2
 // 代表是 把 __NR_fork(在unistd.h中定義為2) 設給 eax, 而 system_call又是根據 eax 來做 system 的dispatch
-// 所以就是去sys_call_table[] 中的第2項，也就是 sys_fork
+// 所以就是去sys_call_table[](此array在sys.h) 中的第2項，也就是 sys_fork，
+
+// int 80h, 輸入的參數為2, 該function 輸出的參數為 res
 static inline _syscall0(int, fork)
 
 // Linux 的系統調用中斷0x80。該中斷是所有系統調用的
@@ -180,7 +184,12 @@ void main(void)		/* This really IS void, no error here. */
 	move_to_user_mode();
 
 	// fork 其實是用  _syscall0 產生出來的(_syscall0代表沒有參數)
-	// int 0x80 在 sched_init 中設定，跳到 system_call.s中的sys_fork(asm)
+	// int 0x80 在 sched_init 中設定，跳到 kernel/system_call.s中的sys_fork(asm)
+
+	// fork是自己複製自己，包括把自己的 PC 值也複製，所以一旦複製，會有另一個 process 跑以下的路徑
+	// 但是 fork 回傳的值會有所不同，fork只有 father 會回傳0, child 會回傳 pid
+	// 所以這邊只有 father 會進 init 中，而 child 不會
+
 	if (!fork()) {		/* we count on this going ok */
 		init();
 	}

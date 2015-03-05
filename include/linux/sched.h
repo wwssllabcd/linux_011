@@ -38,6 +38,7 @@ void panic(const char * str);
 #endif
 extern int tty_write(unsigned minor,char * buf,int count);
 
+// 回傳int的無參數 funPtr, 該 int 的回傳值為 res
 typedef int (*fn_ptr)();
 
 struct i387_struct {
