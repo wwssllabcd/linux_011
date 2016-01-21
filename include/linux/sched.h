@@ -175,11 +175,12 @@ __asm__("str %%ax\n\t" \
  * This also clears the TS-flag if the task we switched to has used
  * tha math co-processor latest.
  */
+//movw %%dx,%1: TSS(n)指給__tmp.b
 #define switch_to(n) {\
 struct {long a,b;} __tmp; \
 __asm__("cmpl %%ecx,current\n\t" \
 	"je 1f\n\t" \
-	"movw %%dx,%1\n\t" \   //TSS(n)指給__tmp.b
+	"movw %%dx,%1\n\t" \
 	"xchgl %%ecx,current\n\t" \
 	"ljmp *%0\n\t" \
 	"cmpl %%ecx,last_task_used_math\n\t" \

@@ -1,8 +1,10 @@
+
+// pushfl: 用來儲存旗標暫存器到堆疊中
 #define move_to_user_mode() \
 __asm__ ("movl %%esp,%%eax\n\t" \
 	"pushl $0x17\n\t" \
 	"pushl %%eax\n\t" \
-	"pushfl\n\t" \  //指令pushfl 用來儲存旗標暫存器到堆疊中
+	"pushfl\n\t" \
 	"pushl $0x0f\n\t" \
 	"pushl $1f\n\t" \
 	"iret\n" \
