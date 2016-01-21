@@ -680,8 +680,11 @@ void con_init(void)
 	bottom	= video_num_lines;
 
 	gotoxy(ORIG_X,ORIG_Y);
+
+	// keyboard 與 tty 做連結？
 	set_trap_gate(0x21,&keyboard_interrupt);
-	//有點像是再設定PIC
+
+	//有點像是在設定PIC
 	outb_p(inb_p(0x21)&0xfd,0x21);
 	a=inb_p(0x61);
 	outb_p(a|0x80,0x61);

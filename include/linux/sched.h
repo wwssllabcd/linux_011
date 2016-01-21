@@ -179,7 +179,7 @@ __asm__("str %%ax\n\t" \
 struct {long a,b;} __tmp; \
 __asm__("cmpl %%ecx,current\n\t" \
 	"je 1f\n\t" \
-	"movw %%dx,%1\n\t" \
+	"movw %%dx,%1\n\t" \   //TSS(n)指給__tmp.b
 	"xchgl %%ecx,current\n\t" \
 	"ljmp *%0\n\t" \
 	"cmpl %%ecx,last_task_used_math\n\t" \
