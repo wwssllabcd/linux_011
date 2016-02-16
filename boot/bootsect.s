@@ -43,34 +43,38 @@
 # ROOT_DEV:	0x000 - same type of floppy as boot.
 #		0x301 - first partition on first drive etc
 	.equ ROOT_DEV, 0x301       # 這邊代表要讀取那個裝置，0x301是讀取/dev/hda1，也可以替換其他裝置
-	ljmp    $BOOTSEG, $_start  # 這邊一個是CS(BOOTSEG), 一個是EIP(_start)
+
+	# ljmp CS,IP: 因為目前就是在07C0的位置，所以若要跳到 _start這個位置，而這個位置就是0x7C00 + _start 的 offset 的地方
+	# 又因為CS是少一個0，所以這邊要填0x7C00變成0x07C0
+	# 這邊一個是CS(BOOTSEG, 0x07c0), 一個是EIP(_start, 這邊就是_start的offset)，因為目前就是在0x07C0的位置
+	ljmp    $BOOTSEG, $_start
 _start:
-	#接下來就是把自己移動到 0x9000的位置，為何要移動，是因為setup.S將參數表保存到那裡而預留空間
-	mov	$BOOTSEG, %ax          # 把0x07C0 設給 ds, 把0x9000設給 es, 等下copy 的時候，會用到源地址的組合是 ds:si, 相應的目標地址為 es:di
+	# 接下來就是把自己移動到 0x90000 的位置，為何要移動，是因為setup.S將參數表保存到那裡而預留空間
+	mov	$BOOTSEG, %ax          # 把0x07C0 設給 ds, 把0x9000設給 es, 等下copy 的時候，會用到源地址的組合是 [ds:si], 相應的目標地址為[es:di]
 	mov	%ax, %ds
-	mov	$INITSEG, %ax
+	mov	$INITSEG, %ax          # 利用ax來設定es，雖然是9w，但實際上設定eS必須設定為9k，這樣CS:IP才會變成9w
 	mov	%ax, %es
-	mov	$256, %cx              # cx register通常拿來當counter, 也就是for loop中的 i
+	mov	$256, %cx              # cx register通常拿來當counter, 也就是for loop中的 i，這邊打算要copy256個word到某地
 	sub	%si, %si               # sub 是暫存器相減，這裡的意思同 xor %si, %si, 也就是si相減，清成0
 	sub	%di, %di
 	rep	                       # rep為repeat指令，他會根據CX值，當作repeat的次數
-	movsw                      # movw AT&T 語法 是隱含操作數的，從 [ds:si]->[es:si], Intel語法好像是 movsw, 也就是copy data從 0x7C0到0x9000，相較於MOVSB，MOVSW是以WORD為單位
-	ljmp	$INITSEG, $go      # 跳到  INITSEG:go  處，也就是不但把自己移到0x9000之外，也把目前執行處，從0x7Cxx移到0x90XX之後，接續著做下去
+	movsw                      # movw AT&T 語法 是隱含操作數的，從 [ds:si]->[es:di], Intel語法好像是 movsw, 也就是copy data從 0x07C0到0x9000，相較於MOVSB，MOVSW是以WORD為單位
+	ljmp	$INITSEG, $go      # 跳到 CS:IP = INITSEG:go 處，也就是不但把自己移到0x9000之外，也把目前執行處，從0x7Cxx移到0x90XX之後，接續著做下去
 
-go:	mov	%cs, %ax               # copy完成後，把ds, es, ss 重設成 cs ( 0x9000) 
+go:	mov	%cs, %ax               # copy完成後，把ds, es, ss 重設成 cs (0x9000)
 	mov	%ax, %ds
 	mov	%ax, %es
 # put stack at 0x9ff00.
 	mov	%ax, %ss
-	mov	$0xFF00, %sp		# arbitrary value >>512
+	mov	$0xFF00, %sp		   # arbitrary value >>512
 
 # load the setup-sectors directly after the bootblock.
 # Note that 'es' is already set up.
 # 準備讀取sec 2 出來，此時sec 2 是放置 setup.S 的 code
 # 使用int 13時，放置 data的地方是以 ES:BX 來代表
 load_setup:
-	mov	$0x0000, %dx		# drive 0, head 0
-	mov	$0x0002, %cx		# sector 2, track 0         # 把 sec 2 讀出來(chs mode 是以sec 1 作為開始)
+	mov	$0x0000, %dx		# drive 0, head 0           # DH=head, DL=drive
+	mov	$0x0002, %cx		# sector 2, track 0         # CH=track, CL=startSector, 把 sec 2 讀出來(chs mode 是以sec 1 作為開始)
 	mov	$0x0200, %bx		# address = 512, in INITSEG # address = ES*0x10 + BX, ES:BX 指向該service要存放在哪,由此可知這邊是要把data讀出來放到0x90200的位置
 	.equ    AX, 0x0200+SETUPLEN                         # 這邊的值為0x0204, AH是0x02號 service (把data放到ram), AL 為讀幾個 sector
 	mov     $AX, %ax		# service 2, nr of sectors

@@ -21,7 +21,8 @@ startup_32:
 	mov %ax,%es
 	mov %ax,%fs
 	mov %ax,%gs
-	lss stack_start,%esp    # load ss, 把這個位置，讀到 SS:ESP中
+
+	lss stack_start,%esp    # load ss, 把這個位置，讀到 SS:ESP中，(LSS:傳送目標指針,把指針內容裝入SS)
 	call setup_idt          # 初始IDT, 即把每個 interrup 都填成 ignore_int(即unknow interrup，啞中斷)的位置
 	call setup_gdt          # 單純 load gdt desc
 	movl $0x10,%eax		    # reload all the segment registers
@@ -30,6 +31,7 @@ startup_32:
 	mov %ax,%fs
 	mov %ax,%gs
 	lss stack_start,%esp
+
 	xorl %eax,%eax          # eax=0
 1:	incl %eax		        # check that A20 really IS enabled
 	movl %eax,0x000000	    # loop forever if it isn't
@@ -78,20 +80,21 @@ check_x87:
  *  written by the page tables.
  */
 setup_idt:
-	lea ignore_int,%edx    #// 把 ignore_int 這個 function offset 的值，放到 edx 中
-	movl $0x00080000,%eax  #// 這邊的 edx 是存放 idt的高4 byte, 而 eax 存放的是低4 byte, selector = 0x0008 = cs
-	movw %dx,%ax		   #/* 把 eax 組合成 segment selector(前2 byte) + function offset(後2 byte)   */
-	movw $0x8E00,%dx	   #/* edx的低 2 byte 是設定權限，固定為 0x8E00, interrupt gate - dpl=0, present */
+	lea  ignore_int, %edx  # 把 ignore_int 這標籤的 address 值，放到 edx 中
+	movl $0x00080000, %eax # 設定 eax 的高2 byte, selector = 0x0008 = cs
+	movw %dx, %ax		   # 設定 eax 的低2 byte，把 eax 組合成 segment selector(前2 byte) + offset(後2 byte)(idt 可見 linux 011, P222)
+	movw $0x8E00, %dx	   # edx 的低 2 byte 是設定權限，固定為 0x8E00, interrupt gate - dpl=0, present
+	lea idt, %edi          # 把 idt 這個標籤的位置，放到 edi 中, edi 為 idt所在的 offset,
+	mov $256, %ecx         # 設置repeat 256次, 因為idt最多256個, 而 idt 在本檔案的最後面，為256個item, 所以大小為 256*8 = 2048
 
-	lea idt,%edi           #// edi 為 idt所在的offset, 而 idt 在本檔案的最後面，為256個item, 所以大小為 256*8 = 2048
-	mov $256,%ecx          #/* 設置repeat 256次, 因為idt最多256個 */
 rp_sidt:
-	movl %eax,(%edi)       #/* edi為 idt的位置所在，組合低4 byte  */
-	movl %edx,4(%edi)      #// 設定高4 byte
-	addl $8,%edi           #/* 移動edi+=8 */
-	dec %ecx               #/* ecx為次數 */
+	movl %eax,(%edi)       # 把 eax 的值(也就是啞中斷)，放入到edi所指的"位置"中
+	movl %edx,4(%edi)      # edx 目前是權限，放到 edi 後面 4 BYTE，可見idt結構應為 8 byte
+	addl $8,%edi           # 移動edi+=8
+	dec %ecx               # ecx為次數
+
 	jne rp_sidt
-	lidt idt_descr         #/* load idt table的位置到iDPTR */
+	lidt idt_descr         # load idt table的位置到iDPTR
 	ret
 
 /*
@@ -105,7 +108,7 @@ rp_sidt:
  *  This routine will beoverwritten by the page tables.
  */
 setup_gdt:
-	lgdt gdt_descr
+	lgdt gdt_descr    # 使用lgdt cmd 把 載入位置到 LGDTR
 	ret
 
 /*
@@ -222,9 +225,9 @@ setup_paging:
 
 .align 2
 .word 0
-idt_descr:          # 低的2 byte, 代表table長度, 高的4 byte為 table 所在的offset , 同 gdt descriptor
+idt_descr:              # 6 byte, 低的2 byte, 代表table長度, 高的4 byte為 table 所在的offset , 同 gdt descriptor
 	.word 256*8-1	# idt contains 256 entries
-	.long idt
+	.long idt       # 大概是idt的 address
 .align 2
 .word 0
 gdt_descr:          # 低的2 byte, 代表table長度, 高的4 byte為 table 所在的offset , 同 idt descriptor
@@ -232,9 +235,11 @@ gdt_descr:          # 低的2 byte, 代表table長度, 高的4 byte為 table 所
 	.long gdt		# magic number, but it works for me :^)
 
 	.align 8
+
 idt:	.fill 256,8,0		# idt is uninitialized
 
-gdt:	
+gdt:
+	# 見linux 011, P91
 	.quad 0x0000000000000000	/* NULL descriptor */
 	.quad 0x00c09a0000000fff	/* 16Mb */
 	.quad 0x00c0920000000fff	/* 16Mb */

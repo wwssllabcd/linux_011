@@ -247,11 +247,11 @@ empty_8042:
 	jnz	empty_8042	# yes - loop
 	ret
 
-gdt:    # gdt table 目前設定如下, 每段為8個byte, 例如載入第一段，就是設 cS = 8, 而bit1~bit3拿來當作 flag
+gdt:    # gdt table 目前設定如下, 每段為8個byte, 例如載入第一段，就是設 CS = 8, 而bit1~bit3拿來當作 flag
 	//段0 = dummy
 	.word	0,0,0,0		# dummy
 
-	//段1
+	//段1，也就是 CS=8 的意思，這邊又設定了 ram 0 為 code 的起始點，所以 ljmp $8, $0的意思就是執行 ram 0那邊的指令
 	.word	0x07FF		# 8Mb - limit=2047 (2048*4096=8Mb)
 	.word	0x0000		# base address=0
 	.word	0x9A00		# code read/exec
